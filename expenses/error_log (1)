@@ -1,0 +1,72 @@
+[20-May-2025 15:07:46 UTC] PHP Warning:  require_once(../tcpdf/tcpdf.php): failed to open stream: No such file or directory in /home/thetjbib/public_html/expenses/generate_invoice.php on line 2
+[20-May-2025 15:07:46 UTC] PHP Fatal error:  require_once(): Failed opening required '../tcpdf/tcpdf.php' (include_path='.:/opt/alt/php74/usr/share/pear') in /home/thetjbib/public_html/expenses/generate_invoice.php on line 2
+[22-May-2025 07:21:05 UTC] PHP Fatal error:  Uncaught Error: Call to a member function execute() on bool in /home/thetjbib/public_html/the-touch/expenses/pay_bills.php:64
+Stack trace:
+#0 {main}
+  thrown in /home/thetjbib/public_html/the-touch/expenses/pay_bills.php on line 64
+[22-May-2025 07:22:54 UTC] PHP Fatal error:  Uncaught Error: Call to a member function execute() on bool in /home/thetjbib/public_html/the-touch/expenses/pay_bills.php:64
+Stack trace:
+#0 {main}
+  thrown in /home/thetjbib/public_html/the-touch/expenses/pay_bills.php on line 64
+[22-May-2025 07:23:02 UTC] PHP Fatal error:  Uncaught Error: Call to a member function execute() on bool in /home/thetjbib/public_html/the-touch/expenses/staff_loans.php:122
+Stack trace:
+#0 {main}
+  thrown in /home/thetjbib/public_html/the-touch/expenses/staff_loans.php on line 122
+[22-May-2025 07:23:15 UTC] PHP Fatal error:  Uncaught Error: Call to a member function execute() on bool in /home/thetjbib/public_html/the-touch/expenses/pay_bills.php:64
+Stack trace:
+#0 {main}
+  thrown in /home/thetjbib/public_html/the-touch/expenses/pay_bills.php on line 64
+[22-May-2025 07:25:12 UTC] PHP Fatal error:  Uncaught Error: Call to a member function execute() on bool in /home/thetjbib/public_html/the-touch/expenses/staff_loans.php:122
+Stack trace:
+#0 {main}
+  thrown in /home/thetjbib/public_html/the-touch/expenses/staff_loans.php on line 122
+[22-May-2025 07:25:29 UTC] PHP Fatal error:  Uncaught Error: Call to a member function execute() on bool in /home/thetjbib/public_html/the-touch/expenses/pay_bills.php:64
+Stack trace:
+#0 {main}
+  thrown in /home/thetjbib/public_html/the-touch/expenses/pay_bills.php on line 64
+[22-May-2025 07:27:16 UTC] PHP Fatal error:  Uncaught Error: Call to a member function execute() on bool in /home/thetjbib/public_html/the-touch/expenses/pay_bills.php:64
+Stack trace:
+#0 {main}
+  thrown in /home/thetjbib/public_html/the-touch/expenses/pay_bills.php on line 64
+[22-May-2025 07:31:37 UTC] PHP Fatal error:  Uncaught Error: Call to a member function execute() on bool in /home/thetjbib/public_html/the-touch/expenses/pay_bills.php:64
+Stack trace:
+#0 {main}
+  thrown in /home/thetjbib/public_html/the-touch/expenses/pay_bills.php on line 64
+[22-May-2025 07:32:54 UTC] PHP Fatal error:  Uncaught Error: Call to a member function execute() on bool in /home/thetjbib/public_html/the-touch/expenses/pay_bills.php:64
+Stack trace:
+#0 {main}
+  thrown in /home/thetjbib/public_html/the-touch/expenses/pay_bills.php on line 64
+[22-May-2025 07:36:18 UTC] PHP Fatal error:  Uncaught Error: Call to a member function execute() on bool in /home/thetjbib/public_html/the-touch/expenses/pay_bills.php:64
+Stack trace:
+#0 {main}
+  thrown in /home/thetjbib/public_html/the-touch/expenses/pay_bills.php on line 64
+[22-May-2025 07:36:21 UTC] PHP Fatal error:  Uncaught Error: Call to a member function execute() on bool in /home/thetjbib/public_html/the-touch/expenses/pay_bills.php:64
+Stack trace:
+#0 {main}
+  thrown in /home/thetjbib/public_html/the-touch/expenses/pay_bills.php on line 64
+[22-May-2025 07:44:02 UTC] PHP Fatal error:  Uncaught Error: Call to a member function execute() on bool in /home/thetjbib/public_html/the-touch/expenses/pay_bills.php:64
+Stack trace:
+#0 {main}
+  thrown in /home/thetjbib/public_html/the-touch/expenses/pay_bills.php on line 64
+[22-May-2025 07:44:17 UTC] PHP Fatal error:  Uncaught Error: Call to a member function execute() on bool in /home/thetjbib/public_html/the-touch/expenses/staff_loans.php:122
+Stack trace:
+#0 {main}
+  thrown in /home/thetjbib/public_html/the-touch/expenses/staff_loans.php on line 122
+[22-May-2025 07:44:43 UTC] PHP Warning:  require_once(../tcpdf/tcpdf.php): failed to open stream: No such file or directory in /home/thetjbib/public_html/the-touch/expenses/generate_invoice.php on line 2
+[22-May-2025 07:44:43 UTC] PHP Fatal error:  require_once(): Failed opening required '../tcpdf/tcpdf.php' (include_path='.:/opt/alt/php74/usr/share/pear') in /home/thetjbib/public_html/the-touch/expenses/generate_invoice.php on line 2
+[22-May-2025 07:47:27 UTC] PHP Fatal error:  Uncaught Error: Call to a member function execute() on bool in /home/thetjbib/public_html/the-touch/expenses/pay_bills.php:64
+Stack trace:
+#0 {main}
+  thrown in /home/thetjbib/public_html/the-touch/expenses/pay_bills.php on line 64
+[27-May-2025 14:23:50 UTC] PHP Notice:  Undefined index: total_amount in /home/thetjbib/public_html/the-touch/expenses/pay_bills.php on line 127
+[27-May-2025 14:23:50 UTC] PHP Notice:  Undefined index: total_amount in /home/thetjbib/public_html/the-touch/expenses/pay_bills.php on line 127
+[27-May-2025 14:23:59 UTC] PHP Fatal error:  Uncaught Error: Call to a member function execute() on bool in /home/thetjbib/public_html/the-touch/expenses/staff_loans.php:122
+Stack trace:
+#0 {main}
+  thrown in /home/thetjbib/public_html/the-touch/expenses/staff_loans.php on line 122
+[27-May-2025 14:36:05 UTC] PHP Notice:  Undefined index: total_amount in /home/thetjbib/public_html/the-touch/expenses/pay_bills.php on line 127
+[27-May-2025 14:36:05 UTC] PHP Notice:  Undefined index: total_amount in /home/thetjbib/public_html/the-touch/expenses/pay_bills.php on line 127
+[27-May-2025 14:40:09 UTC] PHP Notice:  Undefined index: total_amount in /home/thetjbib/public_html/the-touch/expenses/pay_bills.php on line 127
+[27-May-2025 14:40:09 UTC] PHP Notice:  Undefined index: total_amount in /home/thetjbib/public_html/the-touch/expenses/pay_bills.php on line 127
+[27-May-2025 14:40:11 UTC] PHP Notice:  Undefined index: total_amount in /home/thetjbib/public_html/the-touch/expenses/pay_bills.php on line 127
+[27-May-2025 14:40:11 UTC] PHP Notice:  Undefined index: total_amount in /home/thetjbib/public_html/the-touch/expenses/pay_bills.php on line 127
