@@ -219,7 +219,7 @@ function getUserIdHash() {
                             <li class="nav-item"><a href="../Backup/backup.php" class="nav-link">BackUp</a></li>
                             <li class="nav-item"><a href="../sales/orders.php" class="nav-link">Prescription sales</a></li>
                             <li class="nav-item"><a href="../sales/direct_orders.php" class="nav-link">Quick Sales</a></li>
-                            <li class="nav-item"><a href="../sales/view_credit_sales.php" class="nav-link">Creditors</a></li>
+                            <li class="nav-item"><a href="../views/view_credit_sales.php" class="nav-link">Creditors</a></li>
                             <li class="nav-item"><a href="../sales/view_order.php" class="nav-link">Cashier</a></li>
                         <?php endif; ?>
                         <?php if (in_array($userrole, ['Cashier','Pharmtech'])) : ?>
