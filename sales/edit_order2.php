@@ -105,8 +105,8 @@ if (!$error_message) {
         #order-items tr td {
             vertical-align: middle;
         }
-        .quantity-input, .discount-input {
-            width: 60px;
+        .quantity-input, .discount-input, .price-input {
+            width: 70px;
             text-align: center;
         }
         #credit-form {
@@ -158,6 +158,10 @@ if (!$error_message) {
             align-items: center;
             z-index: 9999;
             display: none;
+        }
+        .price-input {
+            background-color: #fffde7;
+            font-weight: bold;
         }
     </style>
 </head>
@@ -308,6 +312,7 @@ if (!$error_message) {
 </div>
 
 <script src="../assets/js/bootstrap.bundle.min.js"></script>
+<script src="../assets/js/bootstrap.min.js"></script>
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script>
 try {
@@ -420,8 +425,8 @@ try {
             updateOrderTable();
         });
 
-        // Update quantity or discount
-        $('#order-items').on('change', '.quantity-input, .discount-input', function() {
+        // Update quantity, discount, or price
+        $('#order-items').on('change', '.quantity-input, .discount-input, .price-input', function() {
             if (<?php echo json_encode($is_paid); ?>) {
                 showError('This order is already paid and cannot be edited.');
                 return;
@@ -433,7 +438,8 @@ try {
 
             const quantity = parseInt($('.quantity-input[data-draft-id="' + draftId + '"]').val()) || 1;
             const discount = parseFloat($('.discount-input[data-draft-id="' + draftId + '"]').val()) || 0;
-            const maxDiscount = item.price * quantity * maxDiscountPercent;
+            const price = parseFloat($('.price-input[data-draft-id="' + draftId + '"]').val()) || 0;
+            const maxDiscount = price * quantity * maxDiscountPercent;
 
             if (discount > maxDiscount) {
                 showError(`Discount cannot exceed ${maxDiscountPercent * 100}% of total amount (KES ${maxDiscount.toFixed(2)}).`);
@@ -453,6 +459,7 @@ try {
 
             item.quantity = quantity;
             item.discount = discount;
+            item.price = price;
             item.total_amount = item.price * item.quantity;
             item.tax_amount = item.total_amount * 0.015;
             item.grand_total = item.total_amount - (item.total_amount * (item.discount / 100));
@@ -502,7 +509,7 @@ try {
                         <td>${index + 1}</td>
                         <td>${item.brandname}</td>
                         <td><input type="number" class="form-control quantity-input" data-draft-id="${item.draft_id}" value="${item.quantity}" min="1"></td>
-                        <td>${parseFloat(item.price).toFixed(2)}</td>
+                        <td><input type="number" class="form-control price-input" data-draft-id="${item.draft_id}" value="${parseFloat(item.price).toFixed(2)}" step="0.01" min="0"></td>
                         <td><input type="number" class="form-control discount-input" data-draft-id="${item.draft_id}" value="${parseFloat(item.discount).toFixed(2)}" step="0.01" min="0"></td>
                         <td>${parseFloat(item.grand_total).toFixed(2)}</td>
                         <td><button class="btn btn-danger btn-sm remove-item" data-draft-id="${item.draft_id}">Remove</button></td>
@@ -752,9 +759,11 @@ try {
                 </head><body>
                 <h2>Order Receipt</h2>
                 <div class="logo">
-                    <div class="logo"><img src="../assets/images/Logo-original.JPEG" width="50" height="50" alt="Joima Pharma Logo"></div>
-                    <p><span class="company-name">Joima Pharmaceuticals</span></p>
-                    <p><span class="slogan">Caring Beyond Prescriptions</span></p>
+                    <div class="logo">
+                        <img src="../assets/images/Logo-round-nobg-2.png" width="100" height="98" alt="Logo">
+                    </div>
+                    <p><span class="company-name">Retail Pharma POS</span></p>
+                    <p><span class="slogan">Human medicines & supplies</span></p>
                 </div>
                 <div class="receipt-info">
                     <p><strong>Receipt ID:</strong> ${$('#receipt_id').val()}</p>

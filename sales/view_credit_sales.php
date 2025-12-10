@@ -40,8 +40,10 @@ if (isset($_GET['message'])) {
                 <th>ID</th>
                 <th>Receipt ID</th>
                 <th>Customer Name</th>
+                <th>Total Amount</th>
                 <th>Balance</th>
                 <th>Transaction Date</th>
+                <th>Credited By</th>
                 <th>Actions</th>
             </tr>
         </thead>
@@ -51,8 +53,10 @@ if (isset($_GET['message'])) {
                     <td><?= $row['id'] ?></td>
                     <td><?= $row['receipt_id'] ?></td>
                     <td><?= $row['customer_name'] ?></td>
+                    <td><?= $row['total_amount'] ?></td>
                     <td><?= $row['balance_amount'] ?></td>
                     <td><?= $row['transDate'] ?></td>
+                    <td><?= $row['created_by'] ?></td>
                     <td>
                         <button class="btn btn-sm btn-success mark-paid-btn" data-receipt-id="<?= $row['receipt_id'] ?>">Mark as Paid</button>
                         <button class="btn btn-sm btn-danger delete-btn" data-receipt-id="<?= $row['receipt_id'] ?>">Delete</button>

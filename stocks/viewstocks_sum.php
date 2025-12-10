@@ -4,7 +4,7 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 include "../includes/config.php";
-/*include "../includes/header.php";*/
+include "../includes/header.php";
 
 $page_title = "Available Stocks";
 

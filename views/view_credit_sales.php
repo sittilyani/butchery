@@ -524,7 +524,7 @@ $result = $conn->query($sql);
                             });
 
                             // Calculate grand total
-                            const grandTotal = subtotal + totalTax - totalDiscount;
+                            const grandTotal = subtotal - totalDiscount;
 
                             // Get amount paid (grand total - balance amount)
                             const balanceAmount = parseFloat(document.getElementById('modalBalanceAmount').textContent.replace('KSh ', ''));

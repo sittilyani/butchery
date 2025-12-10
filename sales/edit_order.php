@@ -11,7 +11,7 @@ include "../includes/config.php";
 include "../includes/header.php";
 
 $page_title = "Edit Draft Order";
-$error_message = null; // Initialize a variable to store error messages
+$error_message = null;
 
 // Check for receipt_id
 if (!isset($_GET['receipt_id'])) {
@@ -73,7 +73,7 @@ if (!$error_message) {
     $result = $conn->query($sql);
     if (!$result) {
         $error_message = "Error fetching stocks: " . $conn->error;
-        $stocks = []; // Set stocks to empty array to prevent issues
+        $stocks = [];
     } else {
         $stocks = $result->fetch_all(MYSQLI_ASSOC);
     }
@@ -112,6 +112,8 @@ if (!$error_message) {
         #credit-form {
             display: none;
             margin-top: 20px;
+            background-color: #f8f9fa;
+            border: 2px solid #ffc107;
         }
         #search-input {
             margin-bottom: 15px;
@@ -162,6 +164,13 @@ if (!$error_message) {
         .price-input {
             background-color: #fffde7;
             font-weight: bold;
+        }
+        .credit-warning {
+            background-color: #fff3cd;
+            border: 1px solid #ffc107;
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 4px;
         }
     </style>
 </head>
@@ -254,6 +263,7 @@ if (!$error_message) {
                     <select class="form-control" id="payment_status" name="payment_status" disabled>
                         <option value="Pending" <?php echo $draft['payment_status'] === 'Pending' ? 'selected' : ''; ?>>Pending</option>
                         <option value="Paid" <?php echo $draft['payment_status'] === 'Paid' ? 'selected' : ''; ?>>Paid</option>
+                        <option value="Credit">Credit</option>
                     </select>
                 </div>
 
@@ -285,20 +295,26 @@ if (!$error_message) {
                 </div>
 
                 <div id="credit-form" class="card p-3">
-                    <h5>Credit Balance</h5>
-                    <div class="mb-3">
-                        <label for="customer-name" class="form-label">Customer Name *</label>
-                        <input type="text" class="form-control" id="customer-name" name="customer_name" required>
+                    <h5 class="text-warning">?? Credit Sale</h5>
+                    <div class="credit-warning">
+                        <strong>Balance Due:</strong> KES <span id="balance-display">0.00</span>
                     </div>
                     <div class="mb-3">
-                        <label for="customer-phone" class="form-label">Customer Phone *</label>
-                        <input type="text" class="form-control" id="customer-phone" name="customer_phone" required>
+                        <label for="customer-name" class="form-label">Customer Name <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="customer-name" name="customer_name">
                     </div>
                     <div class="mb-3">
-                        <label for="balance-amount" class="form-label">Balance Amount</label>
+                        <label for="customer-phone" class="form-label">Customer Phone <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="customer-phone" name="customer_phone" placeholder="e.g., 0712345678">
+                    </div>
+                    <div class="mb-3">
+                        <label for="balance-amount" class="form-label">Balance Amount (Unpaid)</label>
                         <input type="number" class="form-control" id="balance-amount" name="balance_amount" readonly>
                     </div>
-                    <button type="button" class="btn btn-primary" id="save-credit">Save Credit</button>
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-success" id="save-credit">Complete Credit Sale</button>
+                        <button type="button" class="btn btn-secondary" id="cancel-credit">Cancel</button>
+                    </div>
                 </div>
 
                 <div class="d-flex gap-2">
@@ -312,7 +328,7 @@ if (!$error_message) {
 </div>
 
 <script src="../assets/js/bootstrap.bundle.min.js"></script>
-<script src="../assets/js/bootstrap.min.js"></script> 
+<script src="../assets/js/bootstrap.min.js"></script>
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script>
 try {
@@ -333,7 +349,7 @@ try {
 
         // Function to validate date format
         function isValidDate(date) {
-            if (!date || date === 'N/A' || date === '') return true; // Allow empty or N/A
+            if (!date || date === 'N/A' || date === '') return true;
             return /^\d{4}-\d{2}-\d{2}$/.test(date) && !isNaN(new Date(date).getTime());
         }
 
@@ -535,12 +551,27 @@ try {
             const tendered = parseFloat($('#tendered-amount').val()) || 0;
             const change = tendered - grand_total;
 
-            $('#change-amount').text(change.toFixed(2));
-            $('#payment_status').val(tendered >= grand_total ? 'Paid' : 'Pending');
+            $('#change-amount').text(change >= 0 ? change.toFixed(2) : '0.00');
 
+            // Update payment status based on tendered amount
+            if (tendered >= grand_total && tendered > 0) {
+                $('#payment_status').val('Paid');
+                $('#credit-form').hide();
+            } else if (tendered > 0 && tendered < grand_total) {
+                $('#payment_status').val('Credit');
+            } else {
+                $('#payment_status').val('Pending');
+            }
+
+            // Show/hide credit form and update balance
             if (tendered > 0 && tendered < grand_total) {
+                const balance = grand_total - tendered;
+                $('#balance-amount').val(balance.toFixed(2));
+                $('#balance-display').text(balance.toFixed(2));
                 $('#credit-form').show();
-                $('#balance-amount').val((grand_total - tendered).toFixed(2));
+            } else if (tendered === 0 && grand_total > 0) {
+                $('#balance-amount').val(grand_total.toFixed(2));
+                $('#balance-display').text(grand_total.toFixed(2));
             } else {
                 $('#credit-form').hide();
             }
@@ -548,6 +579,29 @@ try {
 
         // Handle tendered amount input
         $('#tendered-amount').on('input', updateTotals);
+
+        // Handle payment method change
+        $('#payment_method').on('change', function() {
+            const method = $(this).val();
+            if (method === 'Credit') {
+                const grand_total = parseFloat($('#grand-total').text()) || 0;
+                $('#tendered-amount').val('0.00');
+                $('#balance-amount').val(grand_total.toFixed(2));
+                $('#balance-display').text(grand_total.toFixed(2));
+                $('#credit-form').show();
+                updateTotals();
+            }
+        });
+
+        // Cancel credit
+        $('#cancel-credit').click(function() {
+            $('#credit-form').hide();
+            $('#customer-name').val('');
+            $('#customer-phone').val('');
+            $('#balance-amount').val('0.00');
+            $('#payment_method').val('Cash');
+            updateTotals();
+        });
 
         // Mark as Paid
         $('#mark-paid').click(function() {
@@ -562,25 +616,32 @@ try {
 
             const tendered = parseFloat($('#tendered-amount').val()) || 0;
             const grand_total = parseFloat($('#grand-total').text()) || 0;
+            const paymentMethod = $('#payment_method').val();
 
-            if (tendered === 0) {
-                if (!confirm('No amount tendered. Do you want to continue with credit sale?')) {
+            // If payment method is Credit or tendered is 0
+            if (paymentMethod === 'Credit' || tendered === 0) {
+                if (!confirm('No payment received. Do you want to create a credit sale?')) {
                     return;
                 }
-                $('#credit-form').show();
                 $('#balance-amount').val(grand_total.toFixed(2));
+                $('#balance-display').text(grand_total.toFixed(2));
+                $('#credit-form').show();
                 return;
             }
 
+            // If partial payment
             if (tendered < grand_total) {
-                if (!confirm('Tendered amount is less than grand total. Continue with credit sale for the balance?')) {
+                if (!confirm('Tendered amount (KES ' + tendered.toFixed(2) + ') is less than grand total (KES ' + grand_total.toFixed(2) + '). Continue with credit sale for the balance?')) {
                     return;
                 }
+                const balance = grand_total - tendered;
+                $('#balance-amount').val(balance.toFixed(2));
+                $('#balance-display').text(balance.toFixed(2));
                 $('#credit-form').show();
-                $('#balance-amount').val((grand_total - tendered).toFixed(2));
                 return;
             }
 
+            // Full payment
             processPayment('full');
         });
 
@@ -591,12 +652,37 @@ try {
                 return;
             }
 
+            if (orderItems.length === 0) {
+                showError('Please add items to the order.');
+                return;
+            }
+
             const customerName = $('#customer-name').val().trim();
             const customerPhone = $('#customer-phone').val().trim();
             const balanceAmount = parseFloat($('#balance-amount').val()) || 0;
 
-            if (!customerName || !customerPhone) {
-                showError('Please enter customer name and phone number.');
+            if (!customerName) {
+                showError('Please enter customer name.');
+                $('#customer-name').focus();
+                return;
+            }
+
+            if (!customerPhone) {
+                showError('Please enter customer phone number.');
+                $('#customer-phone').focus();
+                return;
+            }
+
+            // Validate phone number format (basic validation)
+            const phoneRegex = /^[0-9]{10,15}$/;
+            if (!phoneRegex.test(customerPhone.replace(/[\s\-\+]/g, ''))) {
+                showError('Please enter a valid phone number (10-15 digits).');
+                $('#customer-phone').focus();
+                return;
+            }
+
+            if (balanceAmount <= 0) {
+                showError('Balance amount must be greater than 0.');
                 return;
             }
 
@@ -605,17 +691,23 @@ try {
 
         // Process payment
         function processPayment(paymentType, customerName = '', customerPhone = '') {
+            const grand_total = parseFloat($('#grand-total').text()) || 0;
+            const tendered = parseFloat($('#tendered-amount').val()) || 0;
+
+            // For credit sales, always set payment_status to 'Credit' and payment_method to 'Credit'
             const data = {
                 receipt_id: $('#receipt_id').val(),
-                payment_method: $('#payment_method').val(),
-                payment_status: paymentType === 'full' ? 'Paid' : 'Credit',
-                tendered_amount: parseFloat($('#tendered-amount').val()) || 0,
+                payment_method: paymentType === 'credit' ? 'Credit' : $('#payment_method').val(),
+                payment_status: paymentType === 'credit' ? 'Credit' : 'Paid',
+                tendered_amount: tendered,
                 total_amount: parseFloat($('#total-amount').text()),
                 tax_amount: parseFloat($('#tax-amount').text()),
                 total_discount: parseFloat($('#total-discount').text()),
-                grand_total: parseFloat($('#grand-total').text()),
+                grand_total: grand_total,
                 customer_name: customerName,
                 customer_phone: customerPhone,
+                balance_amount: paymentType === 'credit' ? parseFloat($('#balance-amount').val()) : 0,
+                is_credit_sale: paymentType === 'credit',
                 items: orderItems.map(item => ({
                     brandname: item.brandname,
                     quantity: item.quantity,
@@ -638,10 +730,16 @@ try {
                 success: function(response) {
                     setLoading(false);
                     if (response.status === 'success') {
-                        const successMessage = $('<span>')
-                            .text('Order processed successfully.')
+                        const successMessage = $('<div>')
+                            .text(paymentType === 'credit' ? 'Credit sale processed successfully!' : 'Order processed successfully.')
                             .addClass('success-message');
                         $('#order-form').prepend(successMessage);
+
+                        // Clear credit form
+                        $('#customer-name').val('');
+                        $('#customer-phone').val('');
+                        $('#credit-form').hide();
+
                         setTimeout(function() {
                             window.location.href = response.redirect || '../sales/view_order.php';
                         }, 2000);
@@ -696,6 +794,23 @@ try {
             });
 
             itemsHtml += '</table>';
+
+            const paymentStatus = $('#payment_status').val();
+            const customerName = $('#customer-name').val();
+            const customerPhone = $('#customer-phone').val();
+            const balanceAmount = $('#balance-amount').val();
+
+            let creditInfo = '';
+            if (paymentStatus === 'Credit' && customerName && customerPhone) {
+                creditInfo = `
+                    <div style="border-top: 1px dashed #000; padding-top: 3px; margin-top: 5px;">
+                        <p><strong>CREDIT SALE</strong></p>
+                        <p>Customer: ${customerName}</p>
+                        <p>Phone: ${customerPhone}</p>
+                        <p>Balance Due: KES ${balanceAmount}</p>
+                    </div>
+                `;
+            }
 
             printWindow.document.write(`
                 <html><head><title>Receipt</title>
@@ -778,8 +893,9 @@ try {
                     <p>Grand Total: KES ${$('#grand-total').text()}</p>
                     <p>Tendered: KES ${$('#tendered-amount').val() || '0.00'}</p>
                     <p>Change: KES ${$('#change-amount').text()}</p>
-                    <p>Payment Status: ${$('#payment_status').val()}</p>
+                    <p>Payment Status: ${paymentStatus}</p>
                 </div>
+                ${creditInfo}
                 </body></html>
             `);
             printWindow.document.close();

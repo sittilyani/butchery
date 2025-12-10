@@ -61,14 +61,35 @@ try {
     $total_amount = floatval($input['total_amount']);
     $tax_amount = floatval($input['tax_amount']);
     $discount = floatval(isset($input['discount']) ? $input['discount'] : 0.0);
-    $payment_method = $input['payment_method']; // e.g., 'Cash', 'Card', 'Credit'
-    $payment_status = $input['payment_status']; // e.g., 'paid', 'credit'
+    $payment_method = $input['payment_method']; // e.g., 'Cash', 'Mpesa', 'Credit'
+    $payment_status = $input['payment_status']; // e.g., 'Paid', 'Credit', 'Pending'
     $transBy = $_SESSION['full_name'];
     $items_list = $input['items'];
 
-    // Validate tendered amount
-    if ($tendered_amount < $grand_total && $payment_status !== 'credit') {
-        throw new Exception('Tendered amount cannot be less than grand total for non-credit sales.');
+    // Check if this is a credit sale
+    $is_credit_sale = isset($input['is_credit_sale']) && $input['is_credit_sale'] === true;
+    $customer_name = isset($input['customer_name']) ? trim($input['customer_name']) : '';
+    $customer_phone = isset($input['customer_phone']) ? trim($input['customer_phone']) : '';
+    $balance_amount = isset($input['balance_amount']) ? floatval($input['balance_amount']) : 0;
+
+    // Validate tendered amount - ONLY for non-credit sales
+    if (!$is_credit_sale && strtolower($payment_status) !== 'credit') {
+        if ($tendered_amount < $grand_total) {
+            throw new Exception('Tendered amount cannot be less than grand total for non-credit sales.');
+        }
+    }
+
+    // For credit sales, validate customer information
+    if ($is_credit_sale || strtolower($payment_status) === 'credit') {
+        if (empty($customer_name)) {
+            throw new Exception('Customer name is required for credit sales.');
+        }
+        if (empty($customer_phone)) {
+            throw new Exception('Customer phone is required for credit sales.');
+        }
+        if ($balance_amount <= 0) {
+            throw new Exception('Balance amount must be greater than 0 for credit sales.');
+        }
     }
 
     // Prepare items string for sales table
@@ -104,6 +125,30 @@ try {
     $sale_id = $conn->insert_id;
     $sales_stmt->close();
 
+    // If credit sale, insert into credit_balances table
+    if ($is_credit_sale || strtolower($payment_status) === 'credit') {
+        $credit_sql = "INSERT INTO credit_balances (receipt_id, customer_name, customer_phone, total_amount, tendered_amount, balance_amount, status, created_by, transDate)
+                       VALUES (?, ?, ?, ?, ?, ?, 'Pending', ?, NOW())";
+        $credit_stmt = $conn->prepare($credit_sql);
+        if ($credit_stmt === false) {
+            throw new Exception('Credit balance insert preparation failed: ' . $conn->error);
+        }
+        $credit_stmt->bind_param(
+            "sssddds",
+            $receipt_id,
+            $customer_name,
+            $customer_phone,
+            $grand_total,
+            $tendered_amount,
+            $balance_amount,
+            $transBy
+        );
+        if (!$credit_stmt->execute()) {
+            throw new Exception('Credit balance insertion failed: ' . $credit_stmt->error);
+        }
+        $credit_stmt->close();
+    }
+
     // Delete drafts
     $delete_stmt = $conn->prepare("DELETE FROM sales_drafts WHERE receipt_id = ?");
     $delete_stmt->bind_param("s", $receipt_id);
@@ -111,7 +156,7 @@ try {
         throw new Exception("Failed to delete drafts: " . $delete_stmt->error);
     }
     $delete_stmt->close();
-    
+
     // Insert into sale_items table
     $sale_items_sql = "INSERT INTO sale_items (sales_id, brandname, quantity, unit_price, discount, total_amount, tax_amount, grand_total, sales_date, transBy)
                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?)";
@@ -305,6 +350,28 @@ try {
 
         $currentDate = date('Y-m-d H:i:s');
         $change_amount = max(0, $tendered_amount - $grand_total);
+
+        // Add credit info section if applicable
+        $creditInfoHtml = '';
+        if ($is_credit_sale || strtolower($payment_status) === 'credit') {
+            $creditInfoHtml = "
+            <div style='border-top: 2px dashed #000; margin-top: 5px; padding-top: 5px;'>
+                <div style='text-align: center; font-weight: bold; font-size: 11px; margin-bottom: 3px;'>CREDIT SALE</div>
+                <div class='total-row'>
+                    <span>Customer:</span>
+                    <span>" . htmlspecialchars($customer_name) . "</span>
+                </div>
+                <div class='total-row'>
+                    <span>Phone:</span>
+                    <span>" . htmlspecialchars($customer_phone) . "</span>
+                </div>
+                <div class='total-row' style='font-weight: bold; font-size: 11px;'>
+                    <span>Balance Due:</span>
+                    <span>KES " . number_format($balance_amount, 2) . "</span>
+                </div>
+            </div>";
+        }
+
         $html = "
         <!DOCTYPE html>
         <html>
@@ -467,6 +534,7 @@ try {
                     <span>" . htmlspecialchars(strtoupper($payment_status)) . "</span>
                 </div>
             </div>
+            $creditInfoHtml
             <div class='footer'>
                 <div>Thank you for your business!</div>
                 <div>www.sittilyani@gmail.com</div>
@@ -500,7 +568,9 @@ try {
     // Send success response
     echo json_encode([
         'status' => 'success',
-        'message' => 'Sale processed successfully!',
+        'message' => $is_credit_sale || strtolower($payment_status) === 'credit'
+            ? 'Credit sale processed successfully!'
+            : 'Sale processed successfully!',
         'sale_id' => $sale_id
     ]);
 } catch (Exception $e) {
