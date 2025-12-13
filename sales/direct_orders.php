@@ -141,7 +141,7 @@ if (isset($_GET['receipt_id'])) {
                         <select class="form-control" id="payment_method" name="payment_method">
                             <option value="Cash">Cash</option>
                             <option value="Mpesa">Mpesa</option>
-                            <option value="Credit">Credit</option>
+                            <!--<option value="Credit">Credit</option>-->
                         </select>
                     </div>
 

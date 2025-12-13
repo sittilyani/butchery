@@ -13,13 +13,23 @@ $currentDate = date('Y-m-d');
 $currentMonth = date('Y-m');
 
 // Get top sellers for current date
-$sql_today = "SELECT transBy, SUM(grand_total) as daily_total, COUNT(*) as transactions_count
-                            FROM sales
-                            WHERE DATE(transDate) = '$currentDate'
-                            AND payment_status = 'paid'
-                            GROUP BY transBy
-                            ORDER BY daily_total DESC
-                            LIMIT 5";
+$sql_today = "SELECT
+                transBy,
+                SUM(
+                    CASE
+                        WHEN payment_status = 'Paid' THEN grand_total
+                        WHEN payment_status = 'Credit' THEN tendered_amount
+                        ELSE 0
+                    END
+                ) as daily_total,
+                COUNT(*) as transactions_count
+            FROM sales
+            WHERE DATE(transDate) = '$currentDate'
+                AND payment_method IN ('cash', 'mpesa')
+                AND payment_status IN ('Paid', 'Credit')
+            GROUP BY transBy
+            ORDER BY daily_total DESC
+            LIMIT 5";
 
 $result_today = $conn->query($sql_today);
 $top_sellers_today = [];
@@ -29,22 +39,34 @@ if ($result_today) {
         }
 }
 
-// Get top sellers for current month
-$sql_month = "SELECT transBy, SUM(grand_total) as monthly_total, COUNT(*) as transactions_count
-                            FROM sales
-                            WHERE DATE_FORMAT(transDate, '%Y-%m') = '$currentMonth'
-                            AND payment_status = 'paid'
-                            GROUP BY transBy
-                            ORDER BY monthly_total DESC
-                            LIMIT 5";
+// Top sellers of the current month
+$sql_month = "SELECT
+                    transBy,
+                    SUM(
+                        CASE
+                            WHEN payment_status = 'Paid' THEN grand_total
+                            WHEN payment_status = 'Credit' THEN tendered_amount
+                            ELSE 0
+                        END
+                    ) as monthly_total,
+                    COUNT(*) as transactions_count
+                FROM sales
+                WHERE DATE_FORMAT(transDate, '%Y-%m') = ?
+                    AND payment_status IN ('Paid', 'Credit')
+                GROUP BY transBy
+                ORDER BY monthly_total DESC
+                LIMIT 5";
 
-$result_month = $conn->query($sql_month);
+$stmt = $conn->prepare($sql_month);
+$stmt->bind_param("s", $currentMonth);
+$stmt->execute();
+$result_month = $stmt->get_result();
+
 $top_sellers_month = [];
-if ($result_month) {
-        while ($row = $result_month->fetch_assoc()) {
-                $top_sellers_month[] = $row;
-        }
+while ($row = $result_month->fetch_assoc()) {
+        $top_sellers_month[] = $row;
 }
+$stmt->close();
 
 // Get cumulative profits for today
 $sql_profit_today = "SELECT SUM(sale_items.profit) as daily_profit

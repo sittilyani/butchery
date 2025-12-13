@@ -6,9 +6,9 @@ $today = date('Y-m-d');
 
 // Prepare and execute the SQL query
 $sql = "
-        SELECT SUM(total_amount) AS total_credit_sales
-        FROM sales
-        WHERE payment_method = 'credit'
+        SELECT SUM(balance_amount) AS total_credit_sales
+        FROM credit_balances
+        WHERE status IN ('Partially paid', 'Pending')
             AND DATE(transDate) = ?
 ";
 

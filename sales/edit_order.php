@@ -255,7 +255,7 @@ if (!$error_message) {
                     <select class="form-control" id="payment_method" name="payment_method">
                         <option value="Cash" <?php echo $draft['payment_method'] === 'Cash' ? 'selected' : ''; ?>>Cash</option>
                         <option value="Mpesa" <?php echo $draft['payment_method'] === 'Mpesa' ? 'selected' : ''; ?>>Mpesa</option>
-                        <option value="Credit" <?php echo $draft['payment_method'] === 'Credit' ? 'selected' : ''; ?>>Credit</option>
+                        <!--<option value="Credit" <?php echo $draft['payment_method'] === 'Credit' ? 'selected' : ''; ?>>Credit</option>-->
                     </select>
                 </div>
                 <div class="mb-3">
@@ -536,7 +536,7 @@ try {
             updateTotals();
         }
 
-        // Update totals
+        // Update totals - modify the credit form showing logic
         function updateTotals() {
             const total_amount = orderItems.reduce((sum, item) => sum + parseFloat(item.total_amount), 0);
             const tax_amount = orderItems.reduce((sum, item) => sum + parseFloat(item.tax_amount), 0);
@@ -558,21 +558,20 @@ try {
                 $('#payment_status').val('Paid');
                 $('#credit-form').hide();
             } else if (tendered > 0 && tendered < grand_total) {
+                // Partial payment - credit sale
                 $('#payment_status').val('Credit');
-            } else {
-                $('#payment_status').val('Pending');
-            }
-
-            // Show/hide credit form and update balance
-            if (tendered > 0 && tendered < grand_total) {
                 const balance = grand_total - tendered;
                 $('#balance-amount').val(balance.toFixed(2));
                 $('#balance-display').text(balance.toFixed(2));
                 $('#credit-form').show();
             } else if (tendered === 0 && grand_total > 0) {
+                // No payment - full credit sale
+                $('#payment_status').val('Credit');
                 $('#balance-amount').val(grand_total.toFixed(2));
                 $('#balance-display').text(grand_total.toFixed(2));
+                $('#credit-form').show();
             } else {
+                $('#payment_status').val('Pending');
                 $('#credit-form').hide();
             }
         }
@@ -584,10 +583,15 @@ try {
         $('#payment_method').on('change', function() {
             const method = $(this).val();
             if (method === 'Credit') {
+                // Remove this option since we don't want "Credit" as a payment method
+                // Instead, we'll handle credit through the payment status
+                $(this).val('Cash'); // Default to Cash if someone tries to select Credit
+
                 const grand_total = parseFloat($('#grand-total').text()) || 0;
                 $('#tendered-amount').val('0.00');
                 $('#balance-amount').val(grand_total.toFixed(2));
                 $('#balance-display').text(grand_total.toFixed(2));
+                $('#payment_status').val('Credit'); // Set status to Credit
                 $('#credit-form').show();
                 updateTotals();
             }
@@ -690,82 +694,85 @@ try {
         });
 
         // Process payment
-        function processPayment(paymentType, customerName = '', customerPhone = '') {
-            const grand_total = parseFloat($('#grand-total').text()) || 0;
-            const tendered = parseFloat($('#tendered-amount').val()) || 0;
+function processPayment(paymentType, customerName = '', customerPhone = '') {
+    const grand_total = parseFloat($('#grand-total').text()) || 0;
+    const tendered = parseFloat($('#tendered-amount').val()) || 0;
 
-            // For credit sales, always set payment_status to 'Credit' and payment_method to 'Credit'
-            const data = {
-                receipt_id: $('#receipt_id').val(),
-                payment_method: paymentType === 'credit' ? 'Credit' : $('#payment_method').val(),
-                payment_status: paymentType === 'credit' ? 'Credit' : 'Paid',
-                tendered_amount: tendered,
-                total_amount: parseFloat($('#total-amount').text()),
-                tax_amount: parseFloat($('#tax-amount').text()),
-                total_discount: parseFloat($('#total-discount').text()),
-                grand_total: grand_total,
-                customer_name: customerName,
-                customer_phone: customerPhone,
-                balance_amount: paymentType === 'credit' ? parseFloat($('#balance-amount').val()) : 0,
-                is_credit_sale: paymentType === 'credit',
-                items: orderItems.map(item => ({
-                    brandname: item.brandname,
-                    quantity: item.quantity,
-                    price: item.price,
-                    discount: item.discount,
-                    total_amount: item.total_amount,
-                    tax_amount: item.tax_amount,
-                    grand_total: item.grand_total
-                }))
-            };
+    // Get the actual payment method selected (Cash or Mpesa)
+    const actualPaymentMethod = $('#payment_method').val();
 
-            setLoading(true);
+    // For credit sales, use the actual payment method but set status to 'Credit'
+    const data = {
+        receipt_id: $('#receipt_id').val(),
+        payment_method: actualPaymentMethod, // Use actual method (Cash/Mpesa)
+        payment_status: paymentType === 'credit' ? 'Credit' : 'Paid',
+        tendered_amount: tendered,
+        total_amount: parseFloat($('#total-amount').text()),
+        tax_amount: parseFloat($('#tax-amount').text()),
+        total_discount: parseFloat($('#total-discount').text()),
+        grand_total: grand_total,
+        customer_name: customerName,
+        customer_phone: customerPhone,
+        balance_amount: paymentType === 'credit' ? parseFloat($('#balance-amount').val()) : 0,
+        is_credit_sale: paymentType === 'credit',
+        items: orderItems.map(item => ({
+            brandname: item.brandname,
+            quantity: item.quantity,
+            price: item.price,
+            discount: item.discount,
+            total_amount: item.total_amount,
+            tax_amount: item.tax_amount,
+            grand_total: item.grand_total
+        }))
+    };
 
-            $.ajax({
-                url: 'process_payment.php',
-                method: 'POST',
-                data: JSON.stringify(data),
-                contentType: 'application/json',
-                dataType: 'json',
-                success: function(response) {
-                    setLoading(false);
-                    if (response.status === 'success') {
-                        const successMessage = $('<div>')
-                            .text(paymentType === 'credit' ? 'Credit sale processed successfully!' : 'Order processed successfully.')
-                            .addClass('success-message');
-                        $('#order-form').prepend(successMessage);
+    setLoading(true);
 
-                        // Clear credit form
-                        $('#customer-name').val('');
-                        $('#customer-phone').val('');
-                        $('#credit-form').hide();
+    $.ajax({
+        url: 'process_payment.php',
+        method: 'POST',
+        data: JSON.stringify(data),
+        contentType: 'application/json',
+        dataType: 'json',
+        success: function(response) {
+            setLoading(false);
+            if (response.status === 'success') {
+                const successMessage = $('<div>')
+                    .text(paymentType === 'credit' ? 'Credit sale processed successfully!' : 'Order processed successfully.')
+                    .addClass('success-message');
+                $('#order-form').prepend(successMessage);
 
-                        setTimeout(function() {
-                            window.location.href = response.redirect || '../sales/view_order.php';
-                        }, 2000);
-                    } else {
-                        showError('Error processing payment: ' + response.message);
-                    }
-                },
-                error: function(xhr, status, error) {
-                    setLoading(false);
-                    let errorMessage = 'An unexpected error occurred. Please try again.';
-                    try {
-                        const errorData = JSON.parse(xhr.responseText);
-                        errorMessage = errorData.message || errorMessage;
-                    } catch (e) {
-                        if (xhr.status === 404) {
-                            errorMessage = 'The requested resource was not found.';
-                        } else if (xhr.status === 500) {
-                            errorMessage = 'Server error. Please check the server logs.';
-                        } else {
-                            errorMessage = xhr.responseText || errorMessage;
-                        }
-                    }
-                    showError(errorMessage);
+                // Clear credit form
+                $('#customer-name').val('');
+                $('#customer-phone').val('');
+                $('#credit-form').hide();
+
+                setTimeout(function() {
+                    window.location.href = response.redirect || '../sales/view_order.php';
+                }, 2000);
+            } else {
+                showError('Error processing payment: ' + response.message);
+            }
+        },
+        error: function(xhr, status, error) {
+            setLoading(false);
+            let errorMessage = 'An unexpected error occurred. Please try again.';
+            try {
+                const errorData = JSON.parse(xhr.responseText);
+                errorMessage = errorData.message || errorMessage;
+            } catch (e) {
+                if (xhr.status === 404) {
+                    errorMessage = 'The requested resource was not found.';
+                } else if (xhr.status === 500) {
+                    errorMessage = 'Server error. Please check the server logs.';
+                } else {
+                    errorMessage = xhr.responseText || errorMessage;
                 }
-            });
+            }
+            showError(errorMessage);
         }
+    });
+}
 
         // Print receipt
         $('#print-receipt').click(function() {

@@ -90,6 +90,12 @@ try {
         if ($balance_amount <= 0) {
             throw new Exception('Balance amount must be greater than 0 for credit sales.');
         }
+
+        // Ensure payment method is not 'Credit' for credit sales
+        if (strtolower($payment_method) === 'credit') {
+            // Default to Cash if somehow 'Credit' was sent as payment method
+            $payment_method = 'Cash';
+        }
     }
 
     // Prepare items string for sales table
@@ -157,13 +163,52 @@ try {
     }
     $delete_stmt->close();
 
-    // Insert into sale_items table
-    $sale_items_sql = "INSERT INTO sale_items (sales_id, brandname, quantity, unit_price, discount, total_amount, tax_amount, grand_total, sales_date, transBy)
-                       VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?)";
-    $sale_items_stmt = $conn->prepare($sale_items_sql);
-    if ($sale_items_stmt === false) {
-        throw new Exception('Sale items insert preparation failed: ' . $conn->error);
+   foreach ($items_list as $item) {
+    // Get product unit price
+    $unit_price_sql = "SELECT unit_price FROM products WHERE brandname = ?";
+    $unit_stmt = $conn->prepare($unit_price_sql);
+    $unit_stmt->bind_param("s", $item['brandname']);
+    $unit_stmt->execute();
+    $unit_result = $unit_stmt->get_result();
+
+    $unit_price = 0;
+    if ($unit_row = $unit_result->fetch_assoc()) {
+        $unit_price = $unit_row['unit_price'];
     }
+    $unit_stmt->close();
+
+    // Calculate buying price total
+    $buying_price_total = $unit_price * $item['quantity'];
+
+    // Calculate profit
+    $profit = $item['grand_total'] - $buying_price_total;
+
+    // Insert into sale_items with all calculated values
+    $sale_items_sql = "INSERT INTO sale_items
+        (sales_id, brandname, quantity, unit_price, buying_price_total,
+         price, discount, total_amount, tax_amount, grand_total,
+         profit, sales_date, transBy)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?)";
+
+    $sale_items_stmt = $conn->prepare($sale_items_sql);
+    $sale_items_stmt->bind_param(
+        "isidddddddds",
+        $sale_id,
+        $item['brandname'],
+        $item['quantity'],
+        $unit_price,
+        $buying_price_total,
+        $item['price'],
+        $item['discount'],
+        $item['total_amount'],
+        $item['tax_amount'],
+        $item['grand_total'],
+        $profit,
+        $transBy
+    );
+    $sale_items_stmt->execute();
+    $sale_items_stmt->close();
+}
 
     // Prepare SQL for stock insertion
     $stock_sql = "INSERT INTO stocks (id, transactionType, brandname, productname, reorderLevel, openingBalance, quantityIn, batch, expiryDate, receivedFrom, quantityOut, stockBalance, transBy, transDate)
