@@ -163,27 +163,9 @@ try {
     }
     $delete_stmt->close();
 
-   foreach ($items_list as $item) {
-    // Get product unit price
-    $unit_price_sql = "SELECT unit_price FROM products WHERE brandname = ?";
-    $unit_stmt = $conn->prepare($unit_price_sql);
-    $unit_stmt->bind_param("s", $item['brandname']);
-    $unit_stmt->execute();
-    $unit_result = $unit_stmt->get_result();
+    // --- CORRECTION START: Prepare all item/stock statements before the loop ---
 
-    $unit_price = 0;
-    if ($unit_row = $unit_result->fetch_assoc()) {
-        $unit_price = $unit_row['unit_price'];
-    }
-    $unit_stmt->close();
-
-    // Calculate buying price total
-    $buying_price_total = $unit_price * $item['quantity'];
-
-    // Calculate profit
-    $profit = $item['grand_total'] - $buying_price_total;
-
-    // Insert into sale_items with all calculated values
+    // Prepare SQL for sale_items insertion (Note: $sale_items_sql uses more parameters now for profit/buying price)
     $sale_items_sql = "INSERT INTO sale_items
         (sales_id, brandname, quantity, unit_price, buying_price_total,
          price, discount, total_amount, tax_amount, grand_total,
@@ -191,24 +173,9 @@ try {
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?)";
 
     $sale_items_stmt = $conn->prepare($sale_items_sql);
-    $sale_items_stmt->bind_param(
-        "isidddddddds",
-        $sale_id,
-        $item['brandname'],
-        $item['quantity'],
-        $unit_price,
-        $buying_price_total,
-        $item['price'],
-        $item['discount'],
-        $item['total_amount'],
-        $item['tax_amount'],
-        $item['grand_total'],
-        $profit,
-        $transBy
-    );
-    $sale_items_stmt->execute();
-    $sale_items_stmt->close();
-}
+    if ($sale_items_stmt === false) {
+        throw new Exception('Sale items insert preparation failed: ' . $conn->error);
+    }
 
     // Prepare SQL for stock insertion
     $stock_sql = "INSERT INTO stocks (id, transactionType, brandname, productname, reorderLevel, openingBalance, quantityIn, batch, expiryDate, receivedFrom, quantityOut, stockBalance, transBy, transDate)
@@ -226,30 +193,52 @@ try {
         throw new Exception('Stock movements insert preparation failed: ' . $conn->error);
     }
 
+    // --- CORRECTION: Consolidated loop for sale_items and stock updates ---
+
     foreach ($items_list as $item) {
         // Validate quantity
         if (!is_numeric($item['quantity'])) {
             throw new Exception("Invalid quantity for " . $item['brandname']);
         }
 
-        // Insert sale item
+        // --- 1. Get Product Unit Price for Profit Calculation ---
+        $unit_price_sql = "SELECT unit_price FROM products WHERE brandname = ?";
+        $unit_stmt = $conn->prepare($unit_price_sql);
+        $unit_stmt->bind_param("s", $item['brandname']);
+        $unit_stmt->execute();
+        $unit_result = $unit_stmt->get_result();
+
+        $unit_price = 0;
+        if ($unit_row = $unit_result->fetch_assoc()) {
+            $unit_price = $unit_row['unit_price'];
+        }
+        $unit_stmt->close();
+
+        // Calculate buying price total and profit
+        $buying_price_total = $unit_price * $item['quantity'];
+        $profit = $item['grand_total'] - $buying_price_total;
+
+        // --- 2. Insert into sale_items ---
         $sale_items_stmt->bind_param(
-            "isiddddds",
+            "isidddddddds",
             $sale_id,
             $item['brandname'],
             $item['quantity'],
+            $unit_price,
+            $buying_price_total,
             $item['price'],
             $item['discount'],
             $item['total_amount'],
             $item['tax_amount'],
             $item['grand_total'],
+            $profit,
             $transBy
         );
         if (!$sale_items_stmt->execute()) {
             throw new Exception('Sale item insertion failed for ' . $item['brandname'] . ': ' . $sale_items_stmt->error);
         }
 
-        // Get product information and latest stock balance
+        // --- 3. Get Product Information and Latest Stock Balance ---
         $product_id = null;
         $productname = '';
         $reorder_level = 10;
@@ -320,7 +309,7 @@ try {
             ]));
         }
 
-        // Insert into stocks table
+        // --- 4. Insert into stocks table ---
         $stock_stmt->bind_param(
             "issiisis",
             $product_id,
@@ -336,7 +325,7 @@ try {
             throw new Exception('Stocks insertion failed for ' . $item['brandname'] . ': ' . $stock_stmt->error);
         }
 
-        // Insert into stock_movements table
+        // --- 5. Insert into stock_movements table ---
         $stock_movements_stmt->bind_param(
             "issiiis",
             $product_id,
@@ -352,6 +341,7 @@ try {
         }
     }
 
+    // --- CORRECTION: Close statements once after the loop ---
     $sale_items_stmt->close();
     $stock_stmt->close();
     $stock_movements_stmt->close();
