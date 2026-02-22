@@ -216,7 +216,7 @@ function getUserIdHash() {
                     <ul class="nav-list">
                         <?php if (in_array($userrole, ['Admin', 'Supervisor', 'Manager'])) : ?>
                             <li class="nav-item"><a href="../dashboard/admin_dashboard.php" class="nav-link">Home</a></li>
-                            <li class="nav-item"><a href="../Backup/backup.php" class="nav-link">BackUp</a></li>
+                            <li class="nav-item"><a href="../backup/backup.php" class="nav-link">Backup</a></li>
                             <li class="nav-item"><a href="../sales/orders.php" class="nav-link">Prescription sales</a></li>
                             <li class="nav-item"><a href="../sales/direct_orders.php" class="nav-link">Quick Sales</a></li>
                             <li class="nav-item"><a href="../views/view_credit_sales.php" class="nav-link">Creditors</a></li>
@@ -224,7 +224,7 @@ function getUserIdHash() {
                         <?php endif; ?>
                         <?php if (in_array($userrole, ['Cashier','Pharmtech'])) : ?>
                             <li class="nav-item"><a href="../dashboard/others_dashboard.php" class="nav-link">Home</a></li>
-                            <li class="nav-item"><a href="../Backup/backup.php" class="nav-link">BackUp</a></li>
+                            <li class="nav-item"><a href="../backup/backup.php" class="nav-link">backup</a></li>
                             <li class="nav-item"><a href="../sales/orders.php" class="nav-link">Take Orders</a></li>
                             <li class="nav-item"><a href="../sales/view_order.php" class="nav-link">Cashier</a></li>
                             <li class="nav-item"><a href="../sales/direct_orders.php" class="nav-link">Quick Sales</a></li>
