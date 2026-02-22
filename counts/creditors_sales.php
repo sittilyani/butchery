@@ -1,11 +1,5 @@
 <?php
-// Establish connection to the MySQL database
-$conn = new mysqli("localhost", "root", "", "pharmacy");
-
-// Check connection
-if ($conn->connect_error) {
-    die("Connection failed: " . $conn->connect_error);
-}
+include '../includes/config.php';
 
 // Correctly count all rows in the 'credit_balances' table
 $sql = "SELECT COUNT(*) AS total_creditors FROM credit_balances";

@@ -1,14 +1,8 @@
 <?php
-// Establish connection to the MySQL database
-$conn = new mysqli("localhost", "root", "", "pharmacy");
+include '../includes/config.php';
 
-// Check connection
-if ($conn->connect_error) {
-    die("Connection failed: " . $conn->connect_error);
-}
-
-// Get current date (you can adjust format if needed)
-$currentDate = date('Y-m-d');
+// Get current date
+$currentDate = date('Y-m-d'); 
 
 // Execute query to count items with zero stock but exist in inventory_items
 $sql = "SELECT COUNT(DISTINCT p.id) AS zero_stock_items

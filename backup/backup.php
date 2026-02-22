@@ -1,18 +1,17 @@
 <?php
+ob_start();
+include '../includes/config.php';
 
-// Database configuration
-$host = "localhost";
-$username = "root";
-$password = "";
-$database_name = "pharmacy";
+// Set timezone to East Africa Time (Nairobi)
+date_default_timezone_set('Africa/Nairobi');
 
-// Get connection object and set the charset
-$conn = mysqli_connect($host, $username, $password, $database_name);
-$conn->set_charset("utf8");
-
-// Check connection
-if (!$conn) {
-    die("Connection failed: " . mysqli_connect_error());
+// Get current database name from config (assuming $dbname is in config.php)
+if (isset($dbname)) {
+        $database = $dbname;
+} else {
+        $dbResult = mysqli_query($conn, "SELECT DATABASE() AS db");
+        $dbRow    = mysqli_fetch_assoc($dbResult);
+        $database = $dbRow['db'] ?? 'Unknown_Database';
 }
 
 // Get all table names from the database
@@ -25,7 +24,7 @@ while ($row = mysqli_fetch_row($result)) {
 }
 
 $sqlScript = "-- Database Backup\n";
-$sqlScript .= "-- Database: `$database_name`\n";
+$sqlScript .= "-- Database: `$database`\n";
 $sqlScript .= "-- Backup Date: " . date('Y-m-d H:i:s') . "\n\n";
 
 // Include table structure, data, triggers, and events
@@ -97,7 +96,7 @@ if (!empty($sqlScript)) {
     }
 
     // Save the SQL script to a backup file
-    $backup_file_name = $backup_dir . $database_name . '_backup_' . date('Y-m-d_H-i-s') . '.sql';
+    $backup_file_name = $backup_dir . $database . '_backup_' . date('Y-m-d_H-i-s') . '.sql';
     $fileHandler = fopen($backup_file_name, 'w+');
 
     // Check if the file was opened successfully
