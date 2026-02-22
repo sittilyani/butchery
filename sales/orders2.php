@@ -200,7 +200,7 @@ if (isset($_GET['receipt_id'])) {
                         <select class="form-control" id="payment_method" name="payment_method">
                             <option value="Cash" <?php echo ($draft['payment_method'] ?? '') === 'Cash' ? 'selected' : ''; ?>>Cash</option>
                             <option value="Mpesa" <?php echo ($draft['payment_method'] ?? '') === 'Mpesa' ? 'selected' : ''; ?>>Mpesa</option>
-                            <option value="Credit" <?php echo ($draft['payment_method'] ?? '') === 'Credit' ? 'selected' : ''; ?>>Credit</option>
+                            <!--<option value="Credit" <?php echo ($draft['payment_method'] ?? '') === 'Credit' ? 'selected' : ''; ?>>Credit</option>-->
                         </select>
                     </div>
                     <div class="mb-3">
@@ -262,7 +262,7 @@ if (isset($_GET['receipt_id'])) {
 </div>
 
 <script src="../assets/js/bootstrap.bundle.min.js"></script>
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="../assets/js/bootstrap.bundle.js"></script>
 <script>
     // Expose PHP session data to JavaScript
     const userRole = "<?php echo htmlspecialchars($_SESSION['role'] ?? ''); ?>";

@@ -4,7 +4,35 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-include "../includes/config.php";
+// Use statements at the top
+use Dompdf\Dompdf;
+use Dompdf\Options;
+
+// Prevent direct execution from command line
+if (PHP_SAPI === 'cli') {
+    exit('This script is not intended to be run from the command line.');
+}
+
+// Constants
+const PRINTER_ENABLED = true;
+const PRINTER_NAME = '2023XP1028S-002C';
+const RECEIPTS_DIR = __DIR__ . '/../receipts';
+const SAVE_PDF_IF_POSSIBLE = true;
+
+// Clean output buffers to prevent JSON/HTML mixing
+while (ob_get_level()) {
+    ob_end_clean();
+}
+
+// Include database configuration
+require_once __DIR__ . '/../includes/config.php';
+
+// Include Dompdf autoloader if enabled
+if (SAVE_PDF_IF_POSSIBLE) {
+    require_once '../dompdf/vendor/autoload.php';
+}
+
+
 include "../includes/header.php";
 
 $page_title = "Sell";
@@ -172,6 +200,20 @@ if (isset($_GET['receipt_id'])) {
         .discount-error {
             border-color: #dc3545 !important;
             background-color: #f8d7da !important;
+        }
+        /* Print receipt styles */
+        @media print {
+            .receipt-print {
+                width: 80mm;
+                font-family: 'Courier New', Courier, monospace;
+                font-size: 10px;
+                font-weight: bold;
+                margin: 0;
+                padding: 1mm 2mm;
+                line-height: 1.1;
+                color: #000;
+                background: white;
+            }
         }
     </style>
 </head>
@@ -553,6 +595,7 @@ if (isset($_GET['receipt_id'])) {
             });
         });
 
+        // MODIFIED: Print receipt function matching process_payment.php style
         $('#print-receipt').click(function() {
             if (orderItems.length === 0) {
                 alert('No items to print.');
@@ -560,59 +603,233 @@ if (isset($_GET['receipt_id'])) {
             }
 
             const printWindow = window.open('', '_blank');
-            let itemsHtml = `<table style="width:100%;border-collapse:collapse;font-size:12px;"><tr><th>#</th><th>Product</th><th>Qty</th><th>Price</th><th>Discount %</th><th>Total</th></tr>`;
 
-            orderItems.forEach((item, i) => {
-                const discountAmount = (item.quantity * item.price) * (item.discount / 100);
-                const itemTotal = (item.quantity * item.price) - discountAmount;
+            // Format items table for thermal printer
+            let itemsHtml = '';
+            let counter = 1;
+            orderItems.forEach(item => {
+                const totalForItem = item.quantity * item.price;
+                const discountAmount = totalForItem * (item.discount / 100);
+                const itemTotal = totalForItem - discountAmount;
 
-                itemsHtml += `
-                    <tr>
-                        <td style="padding:2px;border:1px solid #000;">${i + 1}</td>
-                        <td style="padding:2px;border:1px solid #000;">${item.brandname}</td>
-                        <td style="padding:2px;border:1px solid #000;">${item.quantity}</td>
-                        <td style="padding:2px;border:1px solid #000;">${parseFloat(item.price).toFixed(2)}</td>
-                        <td style="padding:2px;border:1px solid #000;">${parseFloat(item.discount).toFixed(2)}%</td>
-                        <td style="padding:2px;border:1px solid #000;">${itemTotal.toFixed(2)}</td>
-                    </tr>`;
+                const brandname = item.brandname.substring(0, 20);
+                const quantity = item.quantity.toString().padStart(3, ' ');
+                const price = parseFloat(item.price).toFixed(2).padStart(8, ' ');
+                const discount = parseFloat(item.discount).toFixed(2).padStart(6, ' ');
+                const total = itemTotal.toFixed(2).padStart(10, ' ');
+
+                itemsHtml += `<div style="font-family: monospace; font-size: 9px; line-height: 1.1; white-space: pre; border-bottom: 1px dashed #E0E0E0;">`;
+                itemsHtml += `<span style="width: 3%; display: inline-block;">${counter}</span>`;
+                itemsHtml += `<span style="width: 30%; display: inline-block;">${brandname}</span>`;
+                itemsHtml += `<span style="width: 8%; display: inline-block; text-align: right;">${quantity}</span>`;
+                itemsHtml += `<span style="width: 15%; display: inline-block; text-align: right;">${price}</span>`;
+                itemsHtml += `<span style="width: 12%; display: inline-block; text-align: right;">${discount}</span>`;
+                itemsHtml += `<span style="width: 20%; display: inline-block; text-align: right;">${total}</span>`;
+                itemsHtml += `</div>`;
+                counter++;
             });
-            itemsHtml += '</table>';
+
+            const totalAmount = parseFloat($('#total-amount').text());
+            const taxAmount = parseFloat($('#tax-amount').text());
+            const discountAmount = parseFloat($('#discount-amount-display').text());
+            const grandTotal = parseFloat($('#grand-total').text());
+            const tenderedAmount = parseFloat($('#tendered-amount').val()) || 0;
+            const changeAmount = grandTotal - tenderedAmount;
+            const paymentMethod = $('#payment_method').val();
+            const paymentStatus = $('#payment_status').val();
+            const cashier = "<?php echo htmlspecialchars($_SESSION['full_name']); ?>";
+            const currentDate = new Date().toLocaleString();
+
+            // Logo path (using same approach as process_payment.php)
+            const logoBase64 = ''; // Will be handled in print window CSS
 
             printWindow.document.write(`
-                <html><head><title>Receipt</title><style>
-                    @media print {
-                        @page { size: 148mm auto; margin: 5mm; padding: 10px; }
-                    }
-                    body { width: 148mm; font-family: "Times New Roman", Times, serif; font-size: 10px; padding: 10px; margin: 10px; }
-                    .logo { text-align: center; margin-bottom: 10px; }
-                    h2 { text-align: center; margin: 5px 0; font-size: 12px; }
-                    .receipt-info, .totals { margin: 5px 0; }
-                    .receipt-info p, .totals p { margin: 2px 0; }
-                    table, th, td { border: 1px solid #000; border-collapse: collapse; text-align: left; }
-                </style></head><body>
-                <div class="logo"><img src="../assets/images/JaimoLogo4.png" width="100" height="100" alt="Jaiomo Pharma Logo"></div>
-                <h2>Order Receipt</h2>
-                <div class="receipt-info">
-                    <p><strong>Receipt ID:</strong> ${receiptId}</p>
-                    <p><strong>Date:</strong> ${new Date().toLocaleString()}</p>
-                    <p><strong>You were served by:</strong> ${"<?php echo htmlspecialchars($_SESSION['full_name']); ?>"}</p>
-                    <p><strong>Payment Method:</strong> ${$('#payment_method').val()}</p>
-                </div>
-                ${itemsHtml}
-                <div class="totals">
-                    <p>Total Amount: KES ${$('#total-amount').text()}</p>
-                    <p>Tax (1.5%): KES ${$('#tax-amount').text()}</p>
-                    <p>Discount: KES ${$('#discount-amount-display').text()}</p>
-                    <p>Grand Total: KES ${$('#grand-total').text()}</p>
-                    <p>Tendered: KES ${$('#tendered-amount').val() || '0.00'}</p>
-                    <p>Change: KES ${$('#change-amount').text()}</p>
-                    <p>Payment Status: ${$('#payment_status').val()}</p>
-                    <p><span style="font-style: italic;">Caring Beyond Prescriptions</span></p>
-                    <p><div style="width: auto; background-color: #CC66FF; height: 30px;"></div></p>
-                </div>
-                </body></html>
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+                    <style>
+                        @page {
+                            size: 80mm auto;
+                            margin: 1mm 2mm;
+                        }
+                        @media print {
+                            body {
+                                width: 80mm;
+                                font-family: 'Courier New', Courier, monospace;
+                                font-size: 10px;
+                                font-weight: bold;
+                                margin: 0;
+                                padding: 1mm 2mm;
+                                line-height: 1.1;
+                                color: #000;
+                                background: white;
+                            }
+                        }
+                        body {
+                            width: 80mm;
+                            font-family: 'Courier New', Courier, monospace;
+                            font-size: 10px;
+                            font-weight: bold;
+                            margin: 0;
+                            padding: 1mm 2mm;
+                            line-height: 1.1;
+                            color: #000;
+                            background: white;
+                        }
+                        .header {
+                            text-align: center;
+                            margin-bottom: 3px;
+                            border-bottom: 1px dashed #000;
+                            padding-bottom: 3px;
+                        }
+                        .logo {
+                            text-align: center;
+                            margin: 2px 0;
+                        }
+                        .logo img {
+                            max-width: 40px;
+                            height: auto;
+                        }
+                        .company-name {
+                            font-weight: bold;
+                            font-size: 11px;
+                            margin: 1px 0;
+                        }
+                        .slogan {
+                            font-style: italic;
+                            font-size: 8px;
+                            margin: 1px 0;
+                        }
+                        .receipt-title {
+                            text-align: center;
+                            font-weight: bold;
+                            font-size: 11px;
+                            margin: 3px 0;
+                            text-transform: uppercase;
+                        }
+                        .receipt-info {
+                            margin: 2px 0;
+                            font-size: 9px;
+                        }
+                        .receipt-info p {
+                            margin: 1px 0;
+                            display: flex;
+                            justify-content: space-between;
+                        }
+                        .receipt-info .label {
+                            font-weight: bold;
+                        }
+                        .items-header {
+                            display: flex;
+                            font-weight: bold;
+                            border-bottom: 1px solid #000;
+                            margin: 3px 0 2px 0;
+                            padding-bottom: 1px;
+                            font-size: 9px;
+                            font-family: monospace;
+                        }
+                        .items-header span {
+                            display: inline-block;
+                        }
+                        .items-header .num { width: 3%; }
+                        .items-header .product { width: 30%; }
+                        .items-header .qty { width: 8%; text-align: right; }
+                        .items-header .price { width: 15%; text-align: right; }
+                        .items-header .discount { width: 12%; text-align: right; }
+                        .items-header .total { width: 20%; text-align: right; }
+                        .totals {
+                            border-top: 1px dashed #000;
+                            margin-top: 3px;
+                            padding-top: 3px;
+                            font-size: 10px;
+                        }
+                        .total-row {
+                            display: flex;
+                            justify-content: space-between;
+                            margin: 1px 0;
+                        }
+                        .total-row.total-final {
+                            font-weight: bold;
+                            border-top: 1px solid #000;
+                            padding-top: 2px;
+                            margin-top: 2px;
+                        }
+                        .footer {
+                            text-align: center;
+                            margin-top: 5px;
+                            font-size: 8px;
+                            border-top: 1px dashed #000;
+                            padding-top: 3px;
+                        }
+                    </style>
+                </head>
+                <body>
+                    <div class='header'>
+                        <div class='logo'>
+                            <img src='../assets/images/Logo-round-nobg-2.png' alt='Logo' style='max-width: 40px; height: auto;'>
+                        </div>
+                        <div class='company-name'>Retail Pharma POS</div>
+                        <div class='slogan'>Human medicines & supplies</div>
+                    </div>
+                    <div class='receipt-title'>SALES RECEIPT</div>
+                    <div class='receipt-info'>
+                        <p><span class='label'>Receipt ID:</span> <span>${receiptId}</span></p>
+                        <p><span class='label'>Date:</span> <span>${currentDate}</span></p>
+                        <p><span class='label'>Cashier:</span> <span>${cashier}</span></p>
+                        <p><span class='label'>Payment Method:</span> <span>${paymentMethod}</span></p>
+                    </div>
+                    <div class='items-header'>
+                        <span class='num'>#</span>
+                        <span class='product'>PRODUCT</span>
+                        <span class='qty'>QTY</span>
+                        <span class='price'>PRICE</span>
+                        <span class='discount'>DISC</span>
+                        <span class='total'>TOTAL</span>
+                    </div>
+                    <div class='items-list'>
+                        ${itemsHtml}
+                    </div>
+                    <div class='totals'>
+                        <div class='total-row'>
+                            <span>Subtotal:</span>
+                            <span>KES ${totalAmount.toFixed(2)}</span>
+                        </div>
+                        <div class='total-row'>
+                            <span>Tax:</span>
+                            <span>KES ${taxAmount.toFixed(2)}</span>
+                        </div>
+                        <div class='total-row'>
+                            <span>Discount:</span>
+                            <span>KES ${discountAmount.toFixed(2)}</span>
+                        </div>
+                        <div class='total-row total-final'>
+                            <span>GRAND TOTAL:</span>
+                            <span>KES ${grandTotal.toFixed(2)}</span>
+                        </div>
+                        <div class='total-row'>
+                            <span>Tendered:</span>
+                            <span>KES ${tenderedAmount.toFixed(2)}</span>
+                        </div>
+                        <div class='total-row total-final'>
+                            <span>CHANGE:</span>
+                            <span>KES ${changeAmount.toFixed(2)}</span>
+                        </div>
+                        <div class='total-row'>
+                            <span>Status:</span>
+                            <span>${paymentStatus.toUpperCase()}</span>
+                        </div>
+                    </div>
+                    <div class='footer'>
+                        <div>Thank you for your business!</div>
+                        <div>www.sittilyani@gmail.com</div>
+                        <div>+ 254-722-42-77-21</div>
+                    </div>
+                </body>
+                </html>
             `);
             printWindow.document.close();
+            printWindow.focus();
             printWindow.print();
         });
 
