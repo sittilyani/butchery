@@ -1,16 +1,14 @@
 <?php
 session_start();
-
 include '../includes/config.php';
 
-$error_message = ''; // Initialize error message variable
+$error_message = '';
 
 if ($conn->connect_error) {
     die("Database connection failed: " . $conn->connect_error);
 }
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-    // Validate and collect form data
     if (empty($_POST['username'])) {
         $error_message = "Username is required";
     } elseif (empty($_POST['password'])) {
@@ -19,8 +17,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $username = trim($_POST['username']);
         $password = trim($_POST['password']);
 
-        // Prepare and execute the SQL query to check user credentials
-        $sql = "SELECT user_id, password, userrole FROM users WHERE username = ?";
+        $sql = "SELECT user_id, password, userrole, first_name, last_name FROM users WHERE username = ?";
         $stmt = $conn->prepare($sql);
 
         if ($stmt === false) {
@@ -29,57 +26,26 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
         $stmt->bind_param("s", $username);
         $stmt->execute();
-
-        if ($stmt->errno) {
-            die("Error executing query: " . $stmt->error);
-        }
-
         $stmt->store_result();
-
-        // Bind the results
-        $stmt->bind_result($user_id, $hashed_password, $userrole);
+        $stmt->bind_result($user_id, $hashed_password, $userrole, $first_name, $last_name);
 
         if ($stmt->num_rows > 0) {
-            // User found, fetch the result
             $stmt->fetch();
-
-            // Verify password
             if (password_verify($password, $hashed_password)) {
-                // Password is correct, store user details in session
                 $_SESSION['user_id'] = $user_id;
                 $_SESSION['userrole'] = $userrole;
                 $_SESSION['username'] = $username;
-                $_SESSION['full_name'] = $user['first_name'] . ' ' . $user['last_name'];
-
-                // Regenerate session ID for security
-
-
-                // Redirect based on user role
-                switch ($userrole) {
-                    case 'Admin':
-                    case 'Cashier':
-                    case 'Security':
-                    case 'Cleaner':
-                    case 'Supervisor':
-                    case 'Manager':
-                    case 'Pharmtech':
-                    case 'Pharmacist':
-                        header("Location: ../sales/orders.php");
-                        exit();
-                    default:
-                        // Unknown user role, handle accordingly
-                        $error_message = "Invalid user role. Please contact support.";
-                        break;
-                }
+                $_SESSION['full_name'] = $first_name . ' ' . $last_name;
+                $_SESSION['role'] = $userrole;
+                session_regenerate_id(true);
+                header("Location: ../includes/layout.php?page=sales/orders.php");
+                exit();
             } else {
-                // Invalid password
                 $error_message = "Invalid credentials. Please try again.";
             }
         } else {
-            // User not found
             $error_message = "Invalid credentials. Please try again.";
         }
-
         $stmt->close();
     }
 }
@@ -90,91 +56,166 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="X-UA-Compatible" content="ie=edge">
-    <!-- Favicon link -->
-    <link rel="icon" type="image/x-icon" href="../assets/favicon/favicon.ico">
-    <title><?php echo isset($page_title) ? htmlspecialchars($page_title) : 'Pharma POS'; ?></title>
-    <link rel="stylesheet" href="../assets/css/bootstrap.min.css" type="text/css">
+    <title>Login - Pharmacy System</title>
+    <link rel="stylesheet" href="../assets/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
-        *{box-sizing:border-box}
-        body{background:linear-gradient(120deg,#330099 0%,#0000ff 100%);background-size:cover;background-position:center;min-height:100vh;margin:0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;font-family:sans-serif}
-        .main-content-wrapper{display:flex;flex-direction:column;align-items:center;width:100%;max-width:1200px}
-        .container-main{width:100%;max-width:450px;padding:30px;text-align:center;background:rgba(255,255,255,0.1);border-radius:15px;backdrop-filter:blur(10px);box-shadow:0 8px 32px rgba(0,0,0,0.1)}
-        .logo-container{text-align:center;margin-top:40px;padding:0 20px}
-        .logo-container img{max-width:180px;height:auto;width:auto;margin-bottom:30px}
-        h1,h2,label{font-weight:bold;color:#FFF;margin-top:5px}
-        h1{font-size:clamp(24px,5vw,54px);margin-bottom:15px}
-        h2{font-size:clamp(14px,3vw,20px);font-weight:normal}
-        .form-control{background:rgba(255,255,255,0.9);border:none;border-radius:8px}
-        .form-control:focus{background:rgba(255,255,255,1);box-shadow:0 0 0 0.2rem rgba(255,255,255,0.25)}
-        .btn-primary{height:45px;width:100%;background-color:#FFF!important;color:#330099!important;border:none!important;border-radius:8px;font-weight:bold;font-size:16px;transition:all 0.3s ease}
-        .btn-primary:hover{background-color:#f0f0f0!important;transform:translateY(-2px);box-shadow:0 4px 12px rgba(0,0,0,0.2)}
-        .alert{border-radius:8px;font-size:14px}
-
-        @media (max-width:768px){body{padding:15px}
-        .container-main{padding:25px 20px;max-width:400px}
-        .logo-container{margin-top:30px}
-        .logo-container img{max-width:150px;margin-bottom:20px}}
-
-        @media (max-width:480px){body{padding:10px;justify-content:flex-start;padding-top:20px}
-        .container-main{padding:20px 15px;max-width:100%}.logo-container{margin-top:20px}
-        .logo-container img{max-width:120px;margin-bottom:15px}.btn-primary{height:50px;font-size:18px}
-        .form-control{font-size:16px;padding:12px}label{font-size:14px}}
-
-        @media (max-width:320px){.container-main{padding:15px 10px}
-        .logo-container img{max-width:100px}}
-        @media (max-height:600px) and (orientation:landscape)
-        {body{justify-content:flex-start;padding-top:10px}
-        .logo-container{margin-top:15px}
-        .logo-container img{max-width:100px;margin-bottom:10px}
-        h1{font-size:clamp(18px,4vw,32px);margin-bottom:8px}
-        h2{font-size:clamp(12px,2.5vw,16px)}}
+        *{margin:0;padding:0;box-sizing:border-box}
+        body{background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);min-height:100vh;display:flex;align-items:center;justify-content:center;font-family:'Inter',sans-serif;padding:20px}
+        .login-container{width:100%;max-width:450px}
+        .login-card{background:rgba(255,255,255,.95);backdrop-filter:blur(10px);border-radius:20px;padding:40px 30px;box-shadow:0 20px 60px rgba(0,0,0,.3);animation:slideUp .5s ease}
+        @keyframes slideUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+        .logo-section{text-align:center;margin-bottom:30px}
+        .logo-section img{max-width:120px;margin-bottom:20px}
+        .logo-section h1{color:#333;font-size:28px;font-weight:700;margin-bottom:5px}
+        .logo-section p{color:#666;font-size:14px}
+        .form-group{margin-bottom:20px}
+        .input-group{position:relative}
+        .input-icon{position:absolute;left:15px;top:50%;transform:translateY(-50%);color:#999;z-index:10}
+        .form-control{width:100%;padding:15px 15px 15px 45px;border:2px solid #e0e0e0;border-radius:12px;font-size:15px;transition:.3s;background:#fff}
+        .form-control:focus{border-color:#667eea;outline:none;box-shadow:0 0 0 3px rgba(102,126,234,.1)}
+        .form-label{display:block;margin-bottom:8px;color:#555;font-weight:500;font-size:14px}
+        .btn-login{width:100%;padding:15px;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);border:none;border-radius:12px;color:#fff;font-size:16px;font-weight:600;cursor:pointer;transition:.3s;margin-top:10px}
+        .btn-login:hover{transform:translateY(-2px);box-shadow:0 10px 20px rgba(102,126,234,.4)}
+        .alert{padding:15px;border-radius:12px;margin-bottom:20px;font-size:14px;display:flex;align-items:center;gap:10px;animation:shake .5s}
+        @keyframes shake{0%,100%{transform:translateX(0)}10%,30%,50%,70%,90%{transform:translateX(-5px)}20%,40%,60%,80%{transform:translateX(5px)}}
+        .alert-danger{background:#fee2e2;color:#b91c1c;border:1px solid #fecaca}
+        .password-toggle{position:absolute;right:15px;top:50%;transform:translateY(-50%);color:#999;cursor:pointer;z-index:10}
+        .password-toggle:hover{color:#667eea}
+        .demo-credentials{margin-top:25px;padding:15px;background:#f8f9fa;border-radius:12px;font-size:13px;color:#666;border:1px dashed #667eea}
+        .demo-credentials p{margin:5px 0;display:flex;align-items:center;gap:10px}
+        .btn-login.loading{position:relative;color:transparent}
+        .btn-login.loading::after{content:'';position:absolute;width:20px;height:20px;top:50%;left:50%;transform:translate(-50%,-50%);border:2px solid #fff;border-radius:50%;border-top-color:transparent;animation:spin .8s linear infinite}
+        @keyframes spin{to{transform:translate(-50%,-50%) rotate(360deg)}}
+        @media(max-width:480px){.login-card{padding:25px 15px}.form-control{padding:12px 12px 12px 40px}.btn-login{padding:12px}}
+        .footer{background:linear-gradient(135deg,#1e293b 0%,#0f172a 100%);color:#fff;padding:30px 40px 20px;position:fixed;bottom:0;left:0;width:100%;z-index:1000}
+        .footer-content{display:grid;grid-template-columns:repeat(3,1fr);gap:40px;max-width:1400px;margin:0 auto}
+        .footer-section{display:flex;flex-direction:column;gap:15px}
+        .footer-title{color:#fff;font-size:18px;font-weight:600;margin:0 0 10px;padding-bottom:10px;position:relative}
+        .footer-title::after{content:'';position:absolute;bottom:0;left:0;width:50px;height:3px;background:#4361ee;border-radius:2px}
+        .contact-info{display:flex;flex-direction:column;gap:12px}
+        .contact-link{display:flex;align-items:center;gap:12px;color:#cbd5e1;text-decoration:none;padding:8px 12px;border-radius:8px;background:rgba(255,255,255,.05);transition:.3s}
+        .contact-link:hover{background:#4361ee;color:#fff;transform:translateX(5px)}
+        .social-links{display:flex;gap:12px;flex-wrap:wrap}
+        .social-link{width:45px;height:45px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;text-decoration:none;font-size:18px;position:relative;overflow:hidden;transition:.3s}
+        .social-link::before{content:'';position:absolute;top:0;left:-100%;width:100%;height:100%;background:rgba(255,255,255,.2);transition:.3s}
+        .social-link:hover::before{left:0}
+        .social-link:hover{transform:translateY(-3px);box-shadow:0 5px 15px rgba(0,0,0,.3)}
+        .social-link.facebook{background:#1877f2}
+        .social-link.twitter{background:#000}
+        .social-link.instagram{background:radial-gradient(circle at 30% 30%,#fdf497,#fd5949,#d6249f,#285AEB)}
+        .social-link.linkedin{background:#0077b5}
+        .social-link.tiktok{background:#000;position:relative}
+        .social-link.tiktok::after{content:'';position:absolute;inset:0;background:linear-gradient(45deg,#25f4ee,#fe2c55);opacity:.7;z-index:0}
+        .social-link.tiktok i{position:relative;z-index:1}
+        .website-link{display:inline-flex;align-items:center;gap:10px;color:#cbd5e1;text-decoration:none;padding:10px 15px;background:rgba(255,255,255,.05);border-radius:8px;transition:.3s;font-size:14px}
+        .website-link:hover{background:#4361ee;color:#fff;transform:translateY(-2px)}
+        .copyright{margin-top:15px;color:#94a3b8;font-size:13px;display:flex;align-items:center;gap:8px;padding-top:15px;border-top:1px solid #334155}
+        .social-link[title]:hover::after{content:attr(title);position:absolute;bottom:-30px;left:50%;transform:translateX(-50%);background:#1e293b;color:#fff;padding:5px 10px;border-radius:5px;font-size:12px;white-space:nowrap;z-index:10}
+        @keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.05)}}
+        .social-link:hover{animation:pulse 1s infinite}
+        @media(max-width:992px){.footer-content{grid-template-columns:repeat(2,1fr)}}
+        @media(max-width:768px){.footer{padding:25px 20px 15px}.footer-content{grid-template-columns:1fr;gap:25px}.footer-section{text-align:center}.footer-title::after{left:50%;transform:translateX(-50%)}.contact-link,.social-links,.website-link,.copyright{justify-content:center}}
     </style>
 </head>
 <body>
-    <!-- Main content wrapper to control the vertical flow of form and logo -->
-    <div class="main-content-wrapper">
-        <div class="container-main">
-            <!--Logo container -->
-            <img src="../assets/images/Logo-round-nobg-2.png" width="180" height="176" alt="Pharmacy Logo" style="margin-bottom: 30px;">
-            <div class="login-form">
-                <form method="post" action="">
-                    <?php if (!empty($error_message)): ?>
-                        <div class="alert alert-danger" role="alert">
-                            <?php echo htmlspecialchars($error_message); ?>
-                        </div>
-                    <?php endif; ?>
-
-                    <div data-mdb-input-init class="form-outline mb-4">
-                        <input type="text" name="username" class="form-control form-control-lg" placeholder="Enter username" required/>
-                        <label class="form-label" for="form3Example3">User Name</label>
-                    </div>
-
-                    <div data-mdb-input-init class="form-outline mb-3">
-                        <input type="password" name="password" class="form-control form-control-lg" placeholder="Enter password" required/>
-                        <label class="form-label" for="form3Example4">Password</label>
-                    </div>
-
-                    <div class="text-center text-lg-start mt-4 pt-2">
-                        <button type="submit" class="btn btn-primary">Login</button>
-                    </div>
-                </form>
+    <div class="login-container">
+        <div class="login-card">
+            <div class="logo-section">
+                <img src="../assets/images/Logo2-rb2.png" alt="Pharmacy Logo">
+                <h1>PharmaSys Pro</h1>
+                <p>Pharmacy Management System</p>
             </div>
-        </div>
-        <!-- Logo is now inside the main-content-wrapper, below the form -->
-        <?php include '../includes/footer.php'; ?>
-        <div class="logo-container">
-            <!-- Added alt attribute for accessibility -->
-            <!--<img src="../assets/images/bonsanteLogo.png" alt="Company Logo"> -->
-            <h2 style="color: white;">PHARMACY POINT OF SALE SYSTEM</h2>
-            <p style="color: white;"><i> Dealers in: human medicines, cosmetics, medical supplies and medical Devices </i></p>
+
+            <?php if (!empty($error_message)): ?>
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-circle"></i>
+                    <?php echo htmlspecialchars($error_message); ?>
+                </div>
+            <?php endif; ?>
+
+            <form method="POST" action="" id="loginForm">
+                <div class="form-group">
+                    <label class="form-label"><i class="fas fa-user"></i> Username</label>
+                    <div class="input-group">
+                        <span class="input-icon"><i class="fas fa-user"></i></span>
+                        <input type="text" class="form-control" name="username"
+                               value="<?php echo isset($_POST['username']) ? htmlspecialchars($_POST['username']) : ''; ?>"
+                               placeholder="Enter username" required>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label"><i class="fas fa-lock"></i> Password</label>
+                    <div class="input-group">
+                        <span class="input-icon"><i class="fas fa-lock"></i></span>
+                        <input type="password" class="form-control" id="password" name="password"
+                               placeholder="Enter password" required>
+                        <span class="password-toggle" onclick="togglePassword()">
+                            <i class="fas fa-eye" id="toggleIcon"></i>
+                        </span>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn-login" id="loginBtn">
+                    <i class="fas fa-sign-in-alt"></i> Login
+                </button>
+            </form>
+
+            <div class="demo-credentials">
+                <p><i class="fas fa-info-circle"></i> <strong>Demo:</strong> admin / admin123</p>
+            </div>
         </div>
     </div>
 
-    <!-- Script includes -->
-    <script src="../assets/fontawesome-7.1.1/js/all.min.js"></script>
-    <link rel="stylesheet" href="../assets/fontawesome-7.1.1/css/all.min.css" type="text/css">
-    <script src="../assets/js/bootstrap.bundle.js"></script>
-    <script src="../assets/js/bootstrap.min.js"></script>
+    <div class="footer">
+        <div class="footer-content">
+            <div class="footer-section">
+                <h4 class="footer-title">Contact</h4>
+                <div class="contact-info">
+                    <a href="mailto:sittilyani@gmail.com" class="contact-link"><i class="fas fa-envelope"></i> sittilyani@gmail.com</a>
+                    <a href="https://wa.me/254722427721" class="contact-link"><i class="fab fa-whatsapp"></i> +254 722 42 77 21</a>
+                    <a href="tel:+254722427721" class="contact-link"><i class="fas fa-phone-alt"></i> +254 722 42 77 21</a>
+                </div>
+            </div>
+            <div class="footer-section">
+                <h4 class="footer-title">Social</h4>
+                <div class="social-links">
+                    <a href="#" class="social-link facebook"><i class="fab fa-facebook-f"></i></a>
+                    <a href="#" class="social-link twitter"><i class="fab fa-x-twitter"></i></a>
+                    <a href="#" class="social-link instagram"><i class="fab fa-instagram"></i></a>
+                    <a href="#" class="social-link linkedin"><i class="fab fa-linkedin-in"></i></a>
+                    <a href="#" class="social-link tiktok"><i class="fab fa-tiktok"></i></a>
+                </div>
+            </div>
+            <div class="footer-section">
+                <h4 class="footer-title">Visit</h4>
+                <a href="https://the-touch-haven-investments.store" class="website-link" target="_blank">
+                    <i class="fas fa-globe"></i> the-touch-haven-investments.store
+                </a>
+                <div class="copyright"><i class="far fa-copyright"></i> <?php echo date('Y'); ?> All rights reserved.</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function togglePassword() {
+            const pwd = document.getElementById('password');
+            const icon = document.getElementById('toggleIcon');
+            if (pwd.type === 'password') {
+                pwd.type = 'text';
+                icon.classList.replace('fa-eye', 'fa-eye-slash');
+            } else {
+                pwd.type = 'password';
+                icon.classList.replace('fa-eye-slash', 'fa-eye');
+            }
+        }
+        document.getElementById('loginForm').addEventListener('submit', function() {
+            document.getElementById('loginBtn').classList.add('loading');
+        });
+        document.getElementById('username').focus();
+        if (window.history.replaceState) window.history.replaceState(null, null, window.location.href);
+    </script>
+    <script src="../assets/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

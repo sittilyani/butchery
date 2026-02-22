@@ -33,9 +33,7 @@ if (SAVE_PDF_IF_POSSIBLE) {
 }
 
 
-include "../includes/header.php";
-
-$page_title = "Sell";
+$page_title = "Process Sell";
 
 // Check for logged-in user
 if (!isset($_SESSION['full_name'])) {

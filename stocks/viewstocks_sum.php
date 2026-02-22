@@ -4,7 +4,6 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 include "../includes/config.php";
-include "../includes/header.php";
 
 $page_title = "Available Stocks";
 
@@ -129,7 +128,7 @@ if (isset($_GET['error'])) {
         }
 
         .page-header {
-            background: #000099;
+            background: #cc0000;
             color: white;
             padding: 30px;
             border-radius: 15px;

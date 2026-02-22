@@ -32,9 +32,8 @@ if (!isset($_SESSION['full_name']) || empty($_SESSION['full_name'])) {
 
 // Store full_name in a variable for easy access
 $user_full_name = $_SESSION['full_name'];
-$user_role = $_SESSION['userrole'] ?? 'User';
+$user_role = $_SESSION['userrole'] ?? 'User'; 
 
-include "../includes/header.php";
 
 $receipt_id = isset($_GET['receipt_id']) ? $_GET['receipt_id'] : 'ORD' . date('Ymd') . sprintf("%04d", rand(1, 9999));
 

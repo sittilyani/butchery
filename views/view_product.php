@@ -1,6 +1,5 @@
 <?php
 include '../includes/config.php';
-include '../includes/header.php';
 
 // Get search parameter
 $search = isset($_GET['search']) ? trim($_GET['search']) : '';
@@ -84,7 +83,7 @@ $stmt->close();
         }
 
         .page-header {
-            background: #000099;
+            background: #cc0000;
             color: white;
             padding: 30px;
             border-radius: 15px;
@@ -165,6 +164,20 @@ $stmt->close();
             font-size: 1rem;
         }
 
+        .add-category-btn {
+            background: #27ae60;
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 25px;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+
+            text-decoration: none;
+            font-size: 1rem;
+        }
+
         .add-product-btn:hover {
             transform: translateY(-2px);
             box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
@@ -194,7 +207,7 @@ $stmt->close();
         }
 
         thead {
-            background: #000099;
+            background: #cc0000;
             color: white;
         }
 
@@ -438,7 +451,7 @@ $stmt->close();
 <body>
     <div class="main-content">
         <div class="page-header">
-            <h1>Total Brands</h1>                        
+            <h1>Total Products</h1>
         </div>
 
         <div class="controls-section">
@@ -451,9 +464,13 @@ $stmt->close();
                     value="<?php echo htmlspecialchars($search); ?>"
                     autocomplete="off"
                 >
-                <i class="fas fa-search search-icon"></i>
+                <i class="far fa-search search-icon"></i>
                 <i class="fas fa-spinner loading-spinner spinner"></i>
             </div>
+
+            <a href="../stocks/categories.php" class="add-category-btn">
+                <i class="fas fa-plus"></i> Add New Categories
+            </a>
 
             <a href="../stocks/products.php" class="add-product-btn">
                 <i class="fas fa-plus"></i> Add New Product
@@ -512,9 +529,7 @@ $stmt->close();
                                     <td><?php echo date('M d, Y', strtotime($product['date_created'])); ?></td>
                                     <td>
                                         <div class="action-buttons">
-                                            <!--<button class="btn btn-view" onclick="location.href='view_product.php?id=<?php echo $product['id']; ?>'" title="View Details">
-                                                <i class="fas fa-eye"></i>
-                                            </button>-->
+
                                             <button class="btn btn-update" onclick="location.href='../views/update_product.php?id=<?php echo $product['id']; ?>'"> Edit
                                                 <i class="fas fa-edit"></i>
                                             </button>

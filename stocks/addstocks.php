@@ -3,7 +3,6 @@
 
 // Include necessary files
 include '../includes/config.php';
-include '../includes/header.php';
 
 // Set initial success message
 $success_message = "";
@@ -242,7 +241,7 @@ $conn->close();
             grid-template-columns: repeat(3, 1fr);
             gap: 25px;
             padding: 20px;
-            background-color: #33CCFF;
+            background-color: #99FF99;
             border: 1px solid var(--border-color);
             border-radius: 8px;
             box-shadow: 0 2px 5px var(--shadow-light);
