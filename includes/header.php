@@ -216,7 +216,19 @@ function getUserIdHash() {
                     <ul class="nav-list">
                         <?php if (in_array($userrole, ['Admin', 'Supervisor', 'Manager'])) : ?>
                             <li class="nav-item"><a href="../dashboard/admin_dashboard.php" class="nav-link">Home</a></li>
-                            <li class="nav-item"><a href="../backup/backup.php" class="nav-link">Backup</a></li>
+                        <?php endif; ?>
+
+                        <?php if (in_array($userrole, ['Admin', 'Supervisor', 'Manager'])) : ?>
+                        <li class="dropdown">
+                            <a href="#" class="dropdown-toggle">Backup</a>
+                                <div class="dropdown-content">
+                                    <a href="../backup/backup.php">Backup Database</a>
+                                    <a href="../backup/view_backups.php">View Backups</a>
+                                </div>
+                        </li>
+                        <?php endif; ?>
+                        <?php if (in_array($userrole, ['Admin', 'Supervisor', 'Manager'])) : ?>
+                            <li class="nav-item"><a href="../dashboard/admin_dashboard.php" class="nav-link">Home</a></li>
                             <li class="nav-item"><a href="../sales/orders.php" class="nav-link">Prescription sales</a></li>
                             <li class="nav-item"><a href="../sales/direct_orders.php" class="nav-link">Quick Sales</a></li>
                             <li class="nav-item"><a href="../views/view_credit_sales.php" class="nav-link">Creditors</a></li>
@@ -237,6 +249,8 @@ function getUserIdHash() {
                                 <div class="dropdown-content">
                                     <a href="../reports/sales_report.php">Sales Reports</a>
                                     <a href="../reports/expiry_report.php">Expiry Reports</a>
+                                    <a href="../reports/staff_performance.php">Staff performance</a>
+                                    <a href="../reports/top_products.php">Product analytics</a>
                                     <a href="../receipts/view_receipts.php">View Receipts</a>
                                 </div>
                         </li>

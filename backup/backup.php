@@ -1,17 +1,18 @@
 <?php
 ob_start();
 include '../includes/config.php';
+include '../includes/header.php';
 
 // Set timezone to East Africa Time (Nairobi)
 date_default_timezone_set('Africa/Nairobi');
 
 // Get current database name from config (assuming $dbname is in config.php)
 if (isset($dbname)) {
-        $database = $dbname;
+    $database = $dbname;
 } else {
-        $dbResult = mysqli_query($conn, "SELECT DATABASE() AS db");
-        $dbRow    = mysqli_fetch_assoc($dbResult);
-        $database = $dbRow['db'] ?? 'Unknown_Database';
+    $dbResult = mysqli_query($conn, "SELECT DATABASE() AS db");
+    $dbRow    = mysqli_fetch_assoc($dbResult);
+    $database = $dbRow['db'] ?? 'Unknown_Database';
 }
 
 // Get all table names from the database
@@ -63,7 +64,7 @@ foreach ($tables as $table) {
 $triggerQuery = "SHOW TRIGGERS";
 $triggerResult = mysqli_query($conn, $triggerQuery);
 
-if ($triggerResult->num_rows > 0) {
+if ($triggerResult && $triggerResult->num_rows > 0) {
     while ($trigger = mysqli_fetch_assoc($triggerResult)) {
         $sqlScript .= "\nDELIMITER ;;\n";
         $sqlScript .= "CREATE TRIGGER `" . $trigger['Trigger'] . "` " . $trigger['Timing'] . " " . $trigger['Event'] .
@@ -76,7 +77,7 @@ if ($triggerResult->num_rows > 0) {
 $eventQuery = "SHOW EVENTS";
 $eventResult = mysqli_query($conn, $eventQuery);
 
-if ($eventResult->num_rows > 0) {
+if ($eventResult && $eventResult->num_rows > 0) {
     while ($event = mysqli_fetch_assoc($eventResult)) {
         $eventCreateQuery = "SHOW CREATE EVENT `" . $event['Name'] . "`";
         $eventCreateResult = mysqli_query($conn, $eventCreateQuery);
@@ -95,27 +96,58 @@ if (!empty($sqlScript)) {
         mkdir($backup_dir, 0777, true);
     }
 
-    // Save the SQL script to a backup file
-    $backup_file_name = $backup_dir . $database . '_backup_' . date('Y-m-d_H-i-s') . '.sql';
+    // Save the SQL script to a backup file with database name included
+    $backup_file_name = $backup_dir . $database . '_' . date('d-m-Y-H-i-s') . '.sql';
     $fileHandler = fopen($backup_file_name, 'w+');
 
     // Check if the file was opened successfully
     if ($fileHandler === false) {
-        echo "Failed to open the backup file for writing.";
+        echo '<div class="alert alert-danger">Failed to open the backup file for writing.</div>';
         exit;
     }
 
     fwrite($fileHandler, $sqlScript);
     fclose($fileHandler);
 
-    // Redirect to admin_dashboard.php after 4 seconds
-    header("refresh:4;url=../dashboard/admin_dashboard.php");
+    // Get file size
+    $fileSize = filesize($backup_file_name);
+    $fileSizeFormatted = formatFileSize($fileSize);
 
-    // Output success message
-    echo '<div style="color: green; background-color:  #DAF7A6; height: 40px; padding: 20px; margin-left: 20px; margin-top: 30px; font-size: 18px;">Backup saved successfully at: ' . $backup_file_name . '</div>';
+    // Redirect to view_backups.php after 2 seconds
+    header("refresh:2;url=view_backups.php");
+
+    // Output success message with Bootstrap styling
+    echo '<div class="container mt-5">';
+    echo '<div class="alert alert-success alert-dismissible fade show" role="alert">';
+    echo '<strong><i class="bi bi-check-circle-fill"></i> Backup Successful!</strong><br>';
+    echo 'Database: <strong>' . htmlspecialchars($database) . '</strong><br>';
+    echo 'Backup saved at: <code>' . htmlspecialchars($backup_file_name) . '</code><br>';
+    echo 'File size: <strong>' . $fileSizeFormatted . '</strong><br>';
+    echo 'Date: ' . date('Y-m-d H:i:s') . '<br>';
+    echo '<hr>';
+    echo '<p class="mb-0">Redirecting to backups page...</p>';
+    echo '</div>';
+    echo '</div>';
 
 } else {
-    echo "No tables, triggers, or events found in the database.";
+    echo '<div class="alert alert-warning">No tables, triggers, or events found in the database.</div>';
+}
+
+// Helper function to format file size
+function formatFileSize($bytes) {
+    if ($bytes >= 1073741824) {
+        return number_format($bytes / 1073741824, 2) . ' GB';
+    } elseif ($bytes >= 1048576) {
+        return number_format($bytes / 1048576, 2) . ' MB';
+    } elseif ($bytes >= 1024) {
+        return number_format($bytes / 1024, 2) . ' KB';
+    } elseif ($bytes > 1) {
+        return $bytes . ' bytes';
+    } elseif ($bytes == 1) {
+        return '1 byte';
+    } else {
+        return '0 bytes';
+    }
 }
 
 ?>
