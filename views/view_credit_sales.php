@@ -465,23 +465,60 @@ $result = $conn->query($sql);
         });
 
         // Print receipt button handler
-        document.getElementById('printReceiptBtn').addEventListener('click', function() {
-            // Create a print-friendly version of the modal content
-            const printContent = document.getElementById('creditDetailsContent').innerHTML;
-            const originalContent = document.body.innerHTML;
+    document.getElementById('printReceiptBtn').addEventListener('click', function() {
+        // Get the content to print
+        const printContent = document.getElementById('creditDetailsContent').innerHTML;
 
-            document.body.innerHTML = `
-                <div class="container">
-                    <h3 class="text-center mb-4">Credit Sale Receipt</h3>
+        // Create a hidden iframe for printing
+        const printFrame = document.createElement('iframe');
+        printFrame.style.position = 'absolute';
+        printFrame.style.width = '0';
+        printFrame.style.height = '0';
+        printFrame.style.border = 'none';
+        document.body.appendChild(printFrame);
+
+        // Write content to iframe
+        const frameDoc = printFrame.contentWindow.document;
+        frameDoc.open();
+        frameDoc.write(`
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>Credit Sale Receipt</title>
+                <link rel="stylesheet" href="../assets/css/bootstrap.min.css">
+                <style>
+                    @media print {
+                        body { padding: 20px; }
+                        .print-container { max-width: 800px; margin: 0 auto; }
+                        .logo { text-align: center; margin-bottom: 20px; }
+                        .receipt-header { text-align: center; margin-bottom: 30px; }
+                        .receipt-header h3 { color: #333; }
+                    }
+                </style>
+            </head>
+            <body>
+                <div class="print-container">
+                    <div class="logo">
+                        <img src="../assets/images/Logo2-rb2.png" width="112" height="88" alt="Logo">
+                    </div>
+                    <div class="receipt-header">
+                        <h3>Credit Sale Receipt</h3>
+                    </div>
                     ${printContent}
                 </div>
-            `;
+                <script>
+                    window.onload = function() { window.print(); };
+                <\/script>
+            </body>
+            </html>
+        `);
+        frameDoc.close();
 
-            window.print();
-            document.body.innerHTML = originalContent;
-            // Re-attach event listeners after printing
-            window.location.reload();
-        });
+        // Remove iframe after printing (when focus returns)
+        setTimeout(function() {
+            document.body.removeChild(printFrame);
+        }, 1000);
+    });
 
         // Function to fetch credit details via AJAX
         function fetchCreditDetails(receiptId) {
