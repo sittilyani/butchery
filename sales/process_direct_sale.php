@@ -298,7 +298,7 @@ try {
         $change_amount = max(0, $tendered_amount - $grand_total);
 
         // Convert logo to base64 for Dompdf reliability
-        $logo_path = __DIR__ . '/../assets/images/Logo-round-nobg-2.png';
+        $logo_path = __DIR__ . '/../assets/images/Logo2-rb2.png';
         $logo_base64 = '';
         if (file_exists($logo_path)) {
             $logo_type = pathinfo($logo_path, PATHINFO_EXTENSION);
@@ -416,8 +416,8 @@ try {
         <body>
             <div class='header'>
                 " . ($logo_base64 ? "<div class='logo'><img src='$logo_base64' alt='Logo'></div>" : "") . "
-                <div class='company-name'>Retail Pharma POS</div>
-                <div class='slogan'>Human medicines & supplies</div>
+                <div class='company-name'>Katakala Butchery & Restaurant</div>
+                <div class='slogan'>Great Cuts and Bites</div>
             </div>
 
             <div class='receipt-title'>SALES RECEIPT</div>
@@ -474,8 +474,8 @@ try {
 
             <div class='footer'>
                 <div>Thank you for your business!</div>
-                <div>www.sittilyani@gmail.com</div>
-                <div>+ 254-722-42-77-21</div>
+                <div>Katakalabutchery@gmail.com</div>
+                <div>0110 990598</div>
             </div>
         </body>
         </html>";
@@ -513,9 +513,10 @@ try {
     // Send success response
     echo json_encode([
         'status' => 'success',
-        'message' => 'Sale processed successfully! Receipt ' . $receipt_id . ' generated.',
+        'message' => 'Sale processed successfully!',
         'sale_id' => $sale_id,
-        'receipt_id' => $receipt_id
+        'receipt_id' => $receipt_id,
+        'clear_cart' => true // Add this flag to indicate cart should be cleared
     ]);
 
 } catch (Exception $e) {

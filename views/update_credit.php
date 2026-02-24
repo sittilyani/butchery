@@ -1,7 +1,7 @@
 <?php
 ob_start();
 include '../includes/config.php';
-include '../includes/header.php';
+include '../includes/session_check.php';
 
 if (!isset($_SESSION['username'])) {
     header("Location: ../auth/login.php");

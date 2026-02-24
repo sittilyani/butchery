@@ -4,7 +4,10 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 include('../includes/config.php');
-include('../includes/header.php');
+include('../includes/session_check.php');
+
+// Set timezone to Africa/Nairobi
+date_default_timezone_set('Africa/Nairobi');
 
 // Get current year and previous years for filter
 $currentYear = date('Y');
@@ -13,7 +16,7 @@ $selectedYear = isset($_GET['year']) ? intval($_GET['year']) : $currentYear;
 // Fetch summary statistics
 $stats = [];
 
-// Total Sales - FIXED: transDate with capital D
+// Total Sales - FIXED: Using correct column name transDate (with capital D)
 $sales_query = "SELECT
     COUNT(*) as total_transactions,
     COALESCE(SUM(CASE WHEN payment_status IN ('Paid', 'Credit') THEN grand_total ELSE 0 END), 0) as total_revenue,
@@ -25,7 +28,7 @@ $stmt->bind_param("i", $selectedYear);
 $stmt->execute();
 $stats['sales'] = $stmt->get_result()->fetch_assoc();
 
-// Total Profit - FIXED: transDate with capital D
+// Total Profit - FIXED: Using correct column name transDate
 $profit_query = "SELECT COALESCE(SUM(si.profit), 0) as total_profit
                 FROM sale_items si
                 JOIN sales s ON si.sales_id = s.sales_id
@@ -60,11 +63,8 @@ $expiry_query = "SELECT COUNT(*) as expiring_count
 $expiry_result = $conn->query($expiry_query);
 $stats['expiring'] = $expiry_result->fetch_assoc()['expiring_count'];
 
-// Get available years for filter - FIXED: transDate with capital D
-$years_query = "SELECT DISTINCT YEAR(transDate) as year FROM sales
-                UNION
-                SELECT DISTINCT YEAR(sales_date) as year FROM sale_items
-                ORDER BY year DESC";
+// Get available years for filter - FIXED: Using correct column name transDate
+$years_query = "SELECT DISTINCT YEAR(transDate) as year FROM sales ORDER BY year DESC";
 $years_result = $conn->query($years_query);
 $available_years = [];
 while ($row = $years_result->fetch_assoc()) {
@@ -82,7 +82,7 @@ if (!in_array($selectedYear, $available_years)) {
     $selectedYear = $available_years[0];
 }
 
-// Monthly Sales for Chart - FIXED: transDate with capital D
+// Monthly Sales for Chart - FIXED: Using correct column name transDate
 $monthly_query = "SELECT
     MONTH(transDate) as month,
     COALESCE(SUM(CASE WHEN payment_status IN ('Paid', 'Credit') THEN grand_total ELSE 0 END), 0) as total,
@@ -109,7 +109,7 @@ foreach ($monthly_data as $data) {
     ];
 }
 
-// Top Products - FIXED: transDate with capital D
+// Top Products - FIXED: Using correct column name transDate
 $top_products_query = "SELECT
     si.brandname,
     SUM(si.quantity) as total_quantity,
@@ -126,7 +126,7 @@ $stmt->bind_param("i", $selectedYear);
 $stmt->execute();
 $top_products = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
 
-// Top Staff - FIXED: transDate with capital D
+// Top Staff - FIXED: Using correct column name transDate
 $top_staff_query = "SELECT
     s.transBy,
     COUNT(*) as transaction_count,
@@ -143,7 +143,7 @@ $stmt->bind_param("i", $selectedYear);
 $stmt->execute();
 $top_staff = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
 
-// Recent Transactions - FIXED: transDate with capital D
+// Recent Transactions - FIXED: Using correct column name transDate
 $recent_query = "SELECT receipt_id, grand_total, payment_method, payment_status, transBy, transDate
                 FROM sales
                 WHERE YEAR(transDate) = ?
@@ -589,7 +589,7 @@ if (empty($available_years)) {
     <div class="dashboard-header">
         <div class="header-title">
             <h1>Dashboard Overview</h1>
-            <p>Welcome back, <?php echo htmlspecialchars($_SESSION['full_name']); ?>! Here's what's happening with your business.</p>
+
         </div>
         <div class="year-selector">
             <label for="year-select"><i class="bi bi-calendar3"></i> Select Year:</label>
@@ -873,7 +873,7 @@ if (empty($available_years)) {
 </div>
 
 <script>
-$(document).ready(function() {
+document.addEventListener('DOMContentLoaded', function() {
     // Monthly Sales Chart
     const months = <?php echo json_encode(array_values($months)); ?>;
     const monthLabels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];

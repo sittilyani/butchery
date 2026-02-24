@@ -1,7 +1,6 @@
 <?php
 ob_start();
 include '../includes/config.php';
-include '../includes/header.php';
 
 // The original query was failing due to MySQL's ONLY_FULL_GROUP_BY mode.
 // We must use aggregation functions (SUM, MAX, GROUP_CONCAT) for columns
@@ -83,7 +82,7 @@ if (!$result) {
         <?php endif; ?>
 
         <div class='next-order;'>
-            <h2>Checkout Basket (Draft Orders)</h2>
+            <h2>Process sales</h2>
         </div>
 
         <?php if ($has_pending_orders): ?>

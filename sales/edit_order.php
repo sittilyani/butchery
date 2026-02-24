@@ -8,7 +8,7 @@ if (session_status() === PHP_SESSION_NONE) {
 }
 
 include "../includes/config.php";
-include "../includes/header.php";
+include "../includes/session_check.php";
 
 $page_title = "Edit Draft Order";
 $error_message = null;

@@ -4,11 +4,13 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 include "../includes/config.php";
-include "../includes/header.php";
+
+// Set timezone to Africa/Nairobi
+date_default_timezone_set('Africa/Nairobi');
 
 $page_title = "Financial Report";
 
-// Get years for filter
+// Get years for filter - FIXED: Using correct column name transDate
 $years_query = "SELECT DISTINCT YEAR(transDate) as year FROM sales ORDER BY year DESC";
 $years_result = $conn->query($years_query);
 $years = [];
@@ -22,7 +24,7 @@ if (empty($years)) {
 $selected_year = isset($_GET['year']) ? intval($_GET['year']) : date('Y');
 $selected_month = isset($_GET['month']) ? intval($_GET['month']) : 0;
 
-// Build WHERE clause
+// Build WHERE clause - FIXED: Using correct column name transDate
 $where = "WHERE YEAR(transDate) = $selected_year";
 if ($selected_month > 0) {
     $where .= " AND MONTH(transDate) = $selected_month";
@@ -31,7 +33,7 @@ if ($selected_month > 0) {
 // Summary Stats
 $summary = [];
 
-// Total Revenue
+// Total Revenue - FIXED: Using correct column name transDate
 $revenue_query = "SELECT
     COUNT(*) as transactions,
     COALESCE(SUM(CASE WHEN payment_status IN ('Paid', 'Credit') THEN grand_total ELSE 0 END), 0) as total_revenue,
@@ -40,7 +42,7 @@ $revenue_query = "SELECT
 FROM sales $where";
 $summary['revenue'] = $conn->query($revenue_query)->fetch_assoc();
 
-// Total Profit
+// Total Profit - FIXED: Using correct column name transDate
 $profit_query = "SELECT
     COALESCE(SUM(si.profit), 0) as total_profit,
     COALESCE(SUM(si.quantity), 0) as items_sold,
@@ -50,7 +52,7 @@ JOIN sales s ON si.sales_id = s.sales_id
 $where";
 $summary['profit'] = $conn->query($profit_query)->fetch_assoc();
 
-// Payment Method Breakdown
+// Payment Method Breakdown - FIXED: Using correct column name transDate
 $payment_query = "SELECT
     payment_method,
     COALESCE(COUNT(*), 0) as count,
@@ -64,7 +66,7 @@ while ($row = $payment_result->fetch_assoc()) {
     $payment_methods[] = $row;
 }
 
-// Monthly Breakdown
+// Monthly Breakdown - FIXED: Using correct column name transDate
 $monthly_query = "SELECT
     MONTH(transDate) as month,
     COUNT(*) as transactions,
@@ -82,7 +84,7 @@ while ($row = $monthly_result->fetch_assoc()) {
     $monthly_data[$row['month']] = $row;
 }
 
-// Daily Sales for selected month
+// Daily Sales for selected month - FIXED: Using correct column name transDate
 $daily_data = [];
 if ($selected_month > 0) {
     $daily_query = "SELECT
@@ -99,7 +101,7 @@ if ($selected_month > 0) {
     }
 }
 
-// Top Products by Revenue
+// Top Products by Revenue - FIXED: Using correct column name transDate
 $top_products_query = "SELECT
     si.brandname,
     SUM(si.quantity) as quantity,
@@ -566,7 +568,7 @@ $net_profit = $summary['profit']['total_profit'] - $estimated_expenses;
     </div>
 
     <!-- Daily Sales (if month selected) -->
-    <?php if ($selected_month > 0): ?>
+    <?php if ($selected_month > 0 && !empty($daily_data)): ?>
     <div class="chart-container" style="margin-bottom: 30px;">
         <div class="chart-header">
             <h3>Daily Sales - <?php echo date('F', mktime(0, 0, 0, $selected_month, 1)); ?> <?php echo $selected_year; ?></h3>
@@ -711,7 +713,7 @@ function exportToCSV() {
     a.click();
 }
 
-$(document).ready(function() {
+document.addEventListener('DOMContentLoaded', function() {
     // Monthly Chart
     const monthlyData = <?php
         $chart_data = [];
@@ -793,7 +795,7 @@ $(document).ready(function() {
         }
     });
 
-    <?php if ($selected_month > 0): ?>
+    <?php if ($selected_month > 0 && !empty($daily_data)): ?>
     // Daily Chart
     const daysInMonth = new Date(<?php echo $selected_year; ?>, <?php echo $selected_month; ?>, 0).getDate();
     const dailyLabels = [];

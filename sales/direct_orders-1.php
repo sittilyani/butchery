@@ -3,17 +3,37 @@ ob_start();
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
-
 include "../includes/config.php";
-include "../includes/header.php";
 
 $page_title = "Direct Orders";
 
-// Check for logged-in user
-if (!isset($_SESSION['full_name'])) {
-    echo json_encode(['status' => 'error', 'message' => 'User not logged in.']);
+// Check for logged-in user and get full name
+if (!isset($_SESSION['user_id']) || !isset($_SESSION['username'])) {
+    header('Location: ../login/login.php?error=' . urlencode('Please login to access this page'));
     exit;
 }
+
+// Get full_name from session or database if not set
+if (!isset($_SESSION['full_name']) || empty($_SESSION['full_name'])) {
+    // Fetch from database
+    $stmt = $conn->prepare("SELECT first_name, last_name FROM users WHERE user_id = ?");
+    $stmt->bind_param("i", $_SESSION['user_id']);
+    $stmt->execute();
+    $result = $stmt->get_result();
+
+    if ($result->num_rows > 0) {
+        $user = $result->fetch_assoc();
+        $_SESSION['full_name'] = trim($user['first_name'] . ' ' . $user['last_name']);
+    } else {
+        $_SESSION['full_name'] = $_SESSION['username']; // Fallback to username
+    }
+    $stmt->close();
+}
+
+// Store full_name in a variable for easy access
+$user_full_name = $_SESSION['full_name'];
+$user_role = $_SESSION['userrole'] ?? 'User';
+
 
 $receipt_id = isset($_GET['receipt_id']) ? $_GET['receipt_id'] : 'ORD' . date('Ymd') . sprintf("%04d", rand(1, 9999));
 
@@ -40,12 +60,6 @@ if (isset($_GET['receipt_id'])) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo htmlspecialchars($page_title); ?></title>
     <link rel="stylesheet" href="../assets/css/bootstrap.min.css" type="text/css">
-    <link rel="stylesheet" href="../assets/css/bootstrap-grid.css" type="text/css">
-    <link rel="stylesheet" href="../assets/css/bootstrap.css" type="text/css">
-    <link rel="stylesheet" href="../assets/css/bootstrap.min.css" type="text/css">
-    <script src="../assets/js/bootstrap.bundle.js"></script>
-    <script src="../assets/js/bootstrap.min.js"></script>
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <link rel="stylesheet" href="../assets/fontawesome-7.1.1/css/all.min.css" type="text/css">
     <style>
         .product-item{cursor:pointer;padding:10px;border:1px solid #ddd;background-color:#99ccff;transition:all .3s ease;height:120px;color:#000;font-size:18px;display:flex;flex-direction:column;justify-content:center}
@@ -71,9 +85,11 @@ if (isset($_GET['receipt_id'])) {
         .success-message{background-color:#DDFCAF;color:green;font-size:18px;padding:5px 10px;margin-bottom:10px;display:inline-block;border-radius:4px}
         .out-of-stock{color:red}
         .discount-error{border-color:#dc3545!important;background-color:#f8d7da!important}
+        .user-info{background-color:#f0f0f0;padding:10px 15px;border-radius:5px;margin-bottom:15px;text-align:right}
+        .user-info strong{color:#000099}
         @media(max-width:1200px){#products-list{grid-template-columns:repeat(auto-fill,minmax(180px,1fr))}.main-content{padding:18px}}
         @media(max-width:992px){#products-list{grid-template-columns:repeat(auto-fill,minmax(160px,1fr))}.product-item{height:110px;padding:8px}.main-content{padding:15px}}
-        @media(max-width:768px){#products-list{grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}.product-item{height:100px;font-size:16px}.product-item h6{font-size:.85rem}.product-item p{font-size:16px}.order-summary{padding:15px;min-height:35vh}.search-container{gap:8px}.sales-mode-btn{margin:0 5px;padding:8px 15px;font-size:.9rem}.main-content{padding:12px}}
+        @media(max-width:768px){#products-list{grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}.product-item{height:100px;font-size:16px}.product-item h6{font-size:.85rem}.product-item p{font-size:16px}.order-summary{padding:15px;min-height:35vh}.search-container{gap:8px}.sales-mode-btn{margin:0 5px;padding:8px 15px;font-size:.9rem}.main-content{padding:12px}.user-info{text-align:center;font-size:14px}}
         @media(max-width:576px){#products-list{grid-template-columns:1fr;gap:8px}.product-item{height:auto;min-height:90px;padding:10px}.product-item h6{font-size:.8rem}.product-item p{font-size:14px}.order-summary{padding:12px;min-height:30vh}.quantity-input,.discount-input{width:60px;font-size:.85rem}.search-container{flex-direction:column;gap:8px}.sales-mode-btn{display:block;width:100%;margin:5px 0;padding:10px}.total-section{padding:12px}.success-message{font-size:16px}.main-content{padding:10px}}
         @media(max-width:400px){.product-item{font-size:14px;min-height:80px}.product-item h6{font-size:.75rem}.product-item p{font-size:13px}.quantity-input,.discount-input{width:50px;font-size:.8rem}.btn-remove{padding:2px 6px;font-size:.7rem}.sales-mode-btn{padding:8px;font-size:.85rem}}
         @media(max-height:600px)and (orientation:landscape){#products-container{max-height:60vh}.order-summary{min-height:50vh}.product-item{height:90px;padding:8px}.main-content{padding:10px}}
@@ -81,6 +97,13 @@ if (isset($_GET['receipt_id'])) {
 </head>
 <body>
 <div class="main-content">
+    <!-- User Information Display -->
+    <div class="user-info">
+        <i class="fas fa-user-circle"></i>
+        <strong>Logged in as:</strong> <?php echo htmlspecialchars($user_full_name); ?>
+        <span class="text-muted">(<?php echo htmlspecialchars($user_role); ?>)</span>
+    </div>
+
     <h2 class="text-center mb-4"><?php echo htmlspecialchars($page_title); ?> - Receipt ID: <?php echo htmlspecialchars($receipt_id); ?></h2>
 
     <!-- Sales Mode Selector -->
@@ -115,11 +138,12 @@ if (isset($_GET['receipt_id'])) {
                     <div class="mb-3">
                         <label for="payment_method" class="form-label">Payment Method</label>
                         <select class="form-control" id="payment_method" name="payment_method">
-                            <option value="Cash" <?php echo ($draft['payment_method'] ?? '') === 'Cash' ? 'selected' : ''; ?>>Cash</option>
-                            <option value="Mpesa" <?php echo ($draft['payment_method'] ?? '') === 'Mpesa' ? 'selected' : ''; ?>>Mpesa</option>
-                            <option value="Credit" <?php echo ($draft['payment_method'] ?? '') === 'Credit' ? 'selected' : ''; ?>>Credit</option>
+                            <option value="Cash">Cash</option>
+                            <option value="Mpesa">Mpesa</option>
+                            <!--<option value="Credit">Credit</option>-->
                         </select>
                     </div>
+
                     <div class="mb-3">
                         <label for="payment_status" class="form-label">Payment Status</label>
                         <select class="form-control" id="payment_status" name="payment_status">
@@ -131,10 +155,10 @@ if (isset($_GET['receipt_id'])) {
                         <thead class="table-light">
                             <tr>
                                 <th>#</th>
-                                <th style="width: 300px;">Product</th>
+                                <th>Product</th>
                                 <th>Qty</th>
                                 <th>Price</th>
-                                <th>Discount %</th>
+                                <th>Disc %</th>
                                 <th>Total</th>
                                 <th>Action</th>
                             </tr>
@@ -185,10 +209,11 @@ if (isset($_GET['receipt_id'])) {
 </div>
 
 <script src="../assets/js/bootstrap.bundle.min.js"></script>
-<script src="../assets/js/bootstrap.bundle.js"></script>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script>
     // Expose PHP session data to JavaScript
-    const userRole = "<?php echo htmlspecialchars($_SESSION['role'] ?? ''); ?>";
+    const userRole = "<?php echo htmlspecialchars($user_role); ?>";
+    const userFullName = "<?php echo htmlspecialchars($user_full_name); ?>";
     const receiptId = "<?php echo htmlspecialchars($receipt_id); ?>";
     const draftItems = <?php echo json_encode($items); ?>;
 
@@ -272,7 +297,6 @@ if (isset($_GET['receipt_id'])) {
             $('#products-list').empty();
         });
 
-        // Handle quantity and discount input with debouncing
         let quantityTimeout;
         $('#order-items').on('input', '.quantity-input', function() {
             clearTimeout(quantityTimeout);
@@ -289,7 +313,6 @@ if (isset($_GET['receipt_id'])) {
                 } else {
                     item.quantity = newQuantity;
                 }
-                // Update totals for this row only
                 const totalForItem = item.quantity * item.price;
                 const discountAmount = totalForItem * (item.discount / 100);
                 const grandTotalForItem = totalForItem - discountAmount;
@@ -299,12 +322,10 @@ if (isset($_GET['receipt_id'])) {
                 item.tax_amount = taxForItem;
                 item.grand_total = grandTotalForItem;
 
-                // Update the row's total and global totals
                 row.find('td').eq(5).text(grandTotalForItem.toFixed(2));
                 updateTotals();
             }
 
-            // Debounce full table update
             quantityTimeout = setTimeout(() => {
                 updateOrderTable();
             }, 500);
@@ -328,7 +349,6 @@ if (isset($_GET['receipt_id'])) {
                 $(this).removeClass('discount-error');
                 item.discount = discountPercent;
 
-                // Update totals for this row
                 const totalForItem = item.quantity * item.price;
                 const discountAmount = totalForItem * (item.discount / 100);
                 const grandTotalForItem = totalForItem - discountAmount;
@@ -411,7 +431,6 @@ if (isset($_GET['receipt_id'])) {
             updateChange();
         });
 
-        // Process Direct Sale
         $('#process-direct-sale').click(function() {
             if (orderItems.length === 0) {
                 alert('Please add items to the order.');
@@ -428,7 +447,7 @@ if (isset($_GET['receipt_id'])) {
                 tax_amount: $('#tax-amount').text(),
                 discount: $('#discount-amount-display').text(),
                 grand_total: $('#grand-total').text(),
-                transBy: "<?php echo htmlspecialchars($_SESSION['full_name']); ?>",
+                transBy: userFullName,
                 sales_mode: 'direct'
             };
 
@@ -443,14 +462,12 @@ if (isset($_GET['receipt_id'])) {
                         const successMessage = $('<span>').text('Direct sale processed successfully!').addClass('success-message');
                         $('#order-form').prepend(successMessage);
 
-                        // Clear the cart after successful sale
                         orderItems = [];
                         updateOrderTable();
 
-                        // Generate new receipt ID for next sale
                         const newReceiptId = 'ORD' + new Date().toISOString().slice(0,10).replace(/-/g,"") + Math.floor(1000 + Math.random() * 9000);
                         $('#receipt_id').val(newReceiptId);
-                        $('h2 .text-center').text('Direct Orders - Receipt ID: ' + newReceiptId);
+                        $('h2.text-center').text('<?php echo htmlspecialchars($page_title); ?> - Receipt ID: ' + newReceiptId);
 
                         setTimeout(function() {
                             successMessage.fadeOut();
@@ -466,7 +483,6 @@ if (isset($_GET['receipt_id'])) {
             });
         });
 
-        // Save Draft
         $('#save-draft').click(function() {
             if (orderItems.length === 0) {
                 alert('Please add items to the order.');
@@ -478,7 +494,7 @@ if (isset($_GET['receipt_id'])) {
                 payment_method: $('#payment_method').val(),
                 payment_status: $('#payment_status').val(),
                 tendered_amount: $('#tendered-amount').val() || '0',
-                transBy: "<?php echo htmlspecialchars($_SESSION['full_name']); ?>",
+                transBy: userFullName,
                 items: orderItems
             };
 
@@ -512,9 +528,7 @@ if (isset($_GET['receipt_id'])) {
 
             const printWindow = window.open('', '_blank');
             let itemsHtml = `<table style="width:100%;border-collapse:collapse;font-size:12px;">
-            <tr><th>#</th><th>Product</th>
-            <th>Qty</th><th>Price</th><th>Discount %</th>
-            <th>Total</th></tr>`;
+            <tr><th>#</th><th>Product</th><th>Qty</th><th>Price</th><th>Discount %</th><th>Total</th></tr>`;
 
             orderItems.forEach((item, i) => {
                 const discountAmount = (item.quantity * item.price) * (item.discount / 100);
@@ -551,7 +565,7 @@ if (isset($_GET['receipt_id'])) {
                 <div class="receipt-info">
                     <p><strong>Receipt ID:</strong> ${receiptId}</p>
                     <p><strong>Date:</strong> ${new Date().toLocaleString()}</p>
-                    <p><strong>You were served by:</strong> ${"<?php echo htmlspecialchars($_SESSION['full_name']); ?>"}</p>
+                    <p><strong>You were served by:</strong> ${userFullName}</p>
                     <p><strong>Payment Method:</strong> ${$('#payment_method').val()}</p>
                 </div>
                 ${itemsHtml}

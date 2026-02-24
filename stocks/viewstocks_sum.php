@@ -485,6 +485,7 @@ if (isset($_GET['error'])) {
         <div class="button-group">
             <a href="../stocks/addstocks.php" class="add-product-btn"><i class="fas fa-plus"></i> Add Stocks</a>
             <a href="?action=generate_pdf" class="add-product-btn"><i class="fas fa-print"></i> Print PDF</a>
+            <a href="../views/view_lowstocks.php"><i class="fa fa-exclamation-triangle"></i> Low Stock</a>
         </div>
     </div>
 

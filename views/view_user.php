@@ -1,7 +1,6 @@
 <?php
 ob_start();
 include '../includes/config.php';
-include '../includes/header.php';
 
 // Initialize $user to an empty array to avoid warnings if no user is found
 $user = [];
@@ -57,14 +56,14 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['submit'])) {
         
         .main-content { margin: 20px auto; max-width: 800px; padding: 0 15px; }
         .views { background: white; border-radius: 15px; box-shadow: 0 10px 40px rgba(0, 0, 153, 0.3); padding: 40px; margin: 20px auto; }
-        .views h2 { color: #000099; font-weight: bold; margin-bottom: 30px; padding-bottom: 15px; border-bottom: 3px solid #000099; text-align: center; }
+        .views h2 { color: #CC0000; font-weight: bold; margin-bottom: 30px; padding-bottom: 15px; border-bottom: 3px solid #CC0000; text-align: center; }
         .user-info-card {  background: linear-gradient(135deg, #f8f9ff 0%, #ffffff 100%); border-radius: 10px; padding: 30px; box-shadow: 0 4px 15px rgba(0, 0, 153, 0.1); }
         .info-row { display: flex;   padding: 15px 0;  border-bottom: 1px solid #e8e8ff; transition: background 0.3s ease; }
         .info-row:last-child {  border-bottom: none; }
         .info-row:hover {  background: rgba(0, 0, 153, 0.05); border-radius: 5px;  padding-left: 10px; }
-        .info-label { font-weight: bold; color: #000099; width: 150px; flex-shrink: 0; }
+        .info-label { font-weight: bold; color: #CC0000; width: 150px; flex-shrink: 0; }
         .info-value {  color: #333; flex: 1; }
-        .btn-back {  background: #000099; color: white; padding: 12px 30px;  border-radius: 8px; text-decoration: none; display: inline-block; margin-top: 30px; font-weight: bold;transition: all 0.3s ease; box-shadow: 0 4px 15px rgba(0, 0, 153, 0.3);}
+        .btn-back {  background: #CC0000; color: white; padding: 12px 30px;  border-radius: 8px; text-decoration: none; display: inline-block; margin-top: 30px; font-weight: bold;transition: all 0.3s ease; box-shadow: 0 4px 15px rgba(0, 0, 153, 0.3);}
         .btn-back:hover {background: #0000cc;color: white; text-decoration: none;transform: translateY(-2px);  box-shadow: 0 6px 20px rgba(0, 0, 153, 0.4);}
         .no-user {  text-align: center; padding: 40px;  color: #666;font-size: 18px; }
 
@@ -123,6 +122,10 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['submit'])) {
        <div class="info-row">
            <span class="info-label">User Role:</span>
            <span class="info-value"><?php echo htmlspecialchars($user['userrole']); ?></span>
+       </div>
+       <div class="info-row">
+           <span class="info-label">Status:</span>
+           <span class="info-value"><?php echo htmlspecialchars($user['status']); ?></span>
        </div>
 
        <div class="info-row">

@@ -114,7 +114,7 @@ function getUserIdHash() {
     <link rel="icon" type="image/ico" sizes="32x32" href="../assets/favicon/favicon.ico">
     <link rel="icon" type="image/png" sizes="16x16" href="../assets/favicon/favicon-16x16.png">
     <link rel="manifest" href="../assets/favicon/site.webmanifest">
-    <title><?php echo isset($page_title) ? htmlspecialchars($page_title) : 'Pharma POS'; ?></title>
+    <title><?php echo isset($page_title) ? htmlspecialchars($page_title) : 'Butchery POS'; ?></title>
     <link rel="stylesheet" href="../assets/css/bootstrap.min.css" type="text/css">
     <style>
         *{box-sizing:border-box;margin:0;padding:0}

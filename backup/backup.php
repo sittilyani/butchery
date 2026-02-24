@@ -1,7 +1,6 @@
 <?php
 ob_start();
 include '../includes/config.php';
-include '../includes/header.php';
 
 // Set timezone to East Africa Time (Nairobi)
 date_default_timezone_set('Africa/Nairobi');

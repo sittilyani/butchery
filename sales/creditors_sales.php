@@ -1,11 +1,6 @@
 <?php
-// Establish connection to the MySQL database
-$conn = new mysqli("localhost", "root", "", "pharmacy");
-
-// Check connection
-if ($conn->connect_error) {
-    die("Connection failed: " . $conn->connect_error);
-}
+include "../includes/config.php";
+include '../includes/session_check.php';
 
 // Calculate total creditors amount (sum of all outstanding balances)
 $sql = "SELECT SUM(balance_amount) AS total_creditors FROM credit_balances WHERE balance_amount > 0";

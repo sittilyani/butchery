@@ -5,6 +5,9 @@ if (session_status() === PHP_SESSION_NONE) {
 }
 include '../includes/config.php';
 
+// Set timezone to Africa/Nairobi
+date_default_timezone_set('Africa/Nairobi');
+
 // Check if user is logged in
 if (!isset($_SESSION['full_name'])) {
     header("Location: ../login/login.php");
@@ -62,6 +65,16 @@ $canAccessDashboard = in_array($userRole, ['Admin', 'Supervisor', 'Manager']);
         .menu-toggle{display:none;background:none;border:none;font-size:24px;color:#475569;cursor:pointer}
         .page-title{font-size:20px;font-weight:700;color:#CC0000;margin:0}
         .top-nav-actions{display:flex;align-items:center;gap:20px}
+
+        /* DateTime Display Styles */
+        .datetime-display{display:flex;align-items:center;gap:10px;background:#f1f5f9;padding:8px 15px;border-radius:10px;color:#1e293b}
+        .datetime-display i,.datetime-display .time{color:#c00}
+        .datetime-display .time{font-weight:600;font-size:1.1em;font-family:monospace}
+        .datetime-display i{font-size:1.1em}
+        .datetime-display .date{font-size:.9em;color:#64748b}
+        @media(max-width:768px){.datetime-display .date{display:none}}
+        @media(max-width:576px){.datetime-display{padding:5px 10px}.datetime-display .time{font-size:.9em}}
+
         .notification-btn{background:#f1f5f9;border:none;width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;color:#475569;position:relative;cursor:pointer}
         .notification-badge{position:absolute;top:-5px;right:-5px;background:#f72585;color:#fff;font-size:10px;padding:3px 6px;border-radius:30px;min-width:18px;text-align:center}
         .user-dropdown{display:flex;align-items:center;gap:10px;background:#f1f5f9;padding:8px 15px;border-radius:10px;cursor:pointer}
@@ -87,11 +100,14 @@ $canAccessDashboard = in_array($userRole, ['Admin', 'Supervisor', 'Manager']);
             .page-title{font-size:18px}
             .user-dropdown .info{display:none}
             .iframe-container{padding:15px}
+            .datetime-display .date {display: none;}
         }
         @media(max-width:576px){
             .top-nav-actions{gap:10px}
             .notification-btn{width:35px;height:35px}
             .user-dropdown{padding:5px 10px}
+            .datetime-display {padding: 5px 10px;}
+            .datetime-display .time {font-size: 0.9em;}
         }
     </style>
 </head>
@@ -123,11 +139,16 @@ $canAccessDashboard = in_array($userRole, ['Admin', 'Supervisor', 'Manager']);
                     <div class="nav-section-title">Main</div>
                     <?php if ($canAccessDashboard): ?>
                     <div class="nav-item">
-                        <a href="../records/dashboard.php" target="contentFrame" class="nav-link" style="background: #FFFF00; color: #000000;">
+                        <a href="../dashboard/admin_dashboard.php" target="contentFrame" class="nav-link" style="background: #FFFF00; color: #000000;">
                             <i class="fa fa-chart-pie"></i> Dashboard
                         </a>
                     </div>
                     <?php endif; ?>
+                    <div class="nav-item">
+                        <a href="../sales/orders.php" target="contentFrame" class="nav-link" style="background: #80FF80; color: #000000;">
+                            <i class="fas fa-shopping-basket"></i> POS
+                        </a>
+                    </div>
                     <div class="nav-item">
                         <a href="../sales/direct_orders.php" target="contentFrame" class="nav-link">
                             <i class="fa fa-shopping-cart"></i> Quick Sales
@@ -143,59 +164,103 @@ $canAccessDashboard = in_array($userRole, ['Admin', 'Supervisor', 'Manager']);
                 <!-- Inventory Section -->
                 <div class="nav-section">
                     <div class="nav-section-title">Inventory</div>
-                    <div class="nav-item">
-                        <a href="../stocks/viewstocks_sum.php" target="contentFrame" class="nav-link">
-                            <i class="fa fa-boxes"></i> Stock Management
-                        </a>
+                        <div class="nav-item">
+                            <a href="../stocks/viewstocks_sum.php" target="contentFrame" class="nav-link">
+                                <i class="fa fa-boxes"></i> Stock Management
+                            </a>
+                        </div>
+                        <div class="nav-item">
+                            <a href="../stocks/view_categories.php" target="contentFrame" class="nav-link">
+                                <img src="../assets/fontawesome/svgs-full/solid/cow.svg" alt="" width="16" height="16" style="filter:invert(1)">
+                                Categories
+                            </a>
+                        </div>
+                        <div class="nav-item">
+                            <a href="../views/view_product.php" target="contentFrame" class="nav-link">
+                                <img src="../assets/fontawesome/svgs-full/solid/boxes.svg" alt="" width="16" height="16" style="filter:invert(1)">
+                                 Products
+                            </a>
+                        </div>
+
+                        <div class="nav-item">
+                            <a href="../views/view_suppliers.php" target="contentFrame" class="nav-link">
+                                <img src="../assets/fontawesome/svgs-full/solid/truck-loading.svg" alt="" width="16" height="16" style="filter:invert(1)">
+                                 Suppliers
+                            </a>
+                        </div>
                     </div>
-                    <div class="nav-item">
-                        <a href="../stocks/view_categories.php" target="contentFrame" class="nav-link">
-                            <i class="fa fa-pills"></i> Categories
-                        </a>
-                    </div>
-                    <div class="nav-item">
-                        <a href="../views/view_product.php" target="contentFrame" class="nav-link">
-                            <i class="fa fa-pills"></i> Products
-                        </a>
-                    </div>
-                    <div class="nav-item">
-                        <a href="../views/view_lowstocks.php" target="contentFrame" class="nav-link">
-                            <i class="fa fa-exclamation-triangle"></i> Low Stock
-                        </a>
-                    </div>
-                </div>
 
                 <!-- Sales Section -->
                 <div class="nav-section">
                     <div class="nav-section-title">Sales</div>
                     <div class="nav-item">
                         <a href="../sales/view_order.php" target="contentFrame" class="nav-link">
-                            <i class="fa fa-receipt"></i> Orders
+                            <img src="../assets/fontawesome/svgs-full/solid/cash-register.svg" alt="" width="16" height="16" style="filter:invert(1)">
+                             Cashier
                         </a>
                     </div>
-                    <div class="nav-item">
-                        <a href="../sales/financial_report.php" target="contentFrame" class="nav-link">
-                            <i class="fa fa-chart-line"></i> Reports
-                        </a>
-                    </div>
+
                     <div class="nav-item">
                         <a href="../views/view_credit_sales.php" target="contentFrame" class="nav-link">
-                            <i class="fa fa-credit-card"></i> Credit Sales
+                            <img src="../assets/fontawesome/svgs-full/solid/credit-card.svg" alt="" width="16" height="16" style="filter:invert(1)">
+                             Credit Sales
                         </a>
                     </div>
                 </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">Reports</div>
+                        <div class="nav-item">
+                            <a href="../reports/financial_report.php" target="contentFrame" class="nav-link">
+                                <img src="../assets/fontawesome/svgs-full/solid/file-invoice-dollar.svg" alt="" width="16" height="16" style="filter:invert(1)">
+                                 Financial Report
+                            </a>
+                        </div>
+                        <div class="nav-item">
+                            <a href="../reports/staff_performance.php" target="contentFrame" class="nav-link">
+                                <img src="../assets/fontawesome/svgs-full/solid/chart-bar.svg" alt="" width="16" height="16" style="filter:invert(1)">
+                                 Staff Performance
+                            </a>
+                        </div>
+                        <div class="nav-item">
+                            <a href="../stocks/view_categories.php" target="contentFrame" class="nav-link">
+                                <img src="../assets/fontawesome/svgs-full/solid/hamburger.svg" alt="" width="16" height="16" style="filter:invert(1)">
+                                 Categories
+                            </a>
+                        </div>
+                        <div class="nav-item">
+                            <a href="../views/view_product.php" target="contentFrame" class="nav-link">
+                                <img src="../assets/fontawesome/svgs-full/solid/cow.svg" alt="" width="16" height="16" style="filter:invert(1)">
+                                 Products
+                            </a>
+                        </div>
 
+                        <div class="nav-item">
+                            <a href="../views/view_suppliers.php" target="contentFrame" class="nav-link">
+                                <img src="../assets/fontawesome/svgs-full/solid/eye.svg" alt="" width="16" height="16" style="filter:invert(1)">
+                                Suppliers
+                            </a>
+                        </div>
+                        <div class="nav-item">
+                            <a href="../receipts/view_receipts.php" target="contentFrame" class="nav-link">
+                                <img src="../assets/fontawesome/svgs-full/solid/print.svg" alt="" width="16" height="16" style="filter:invert(1)">
+                                Receipts
+                            </a>
+                        </div>
+
+                    </div>
                 <!-- System Section -->
                 <div class="nav-section">
                     <div class="nav-section-title">System</div>
                     <div class="nav-item">
-                        <a href="../users/settings.php" target="contentFrame" class="nav-link">
-                            <i class="fa fa-cog"></i> User Settings
+                        <a href="../login/userslist.php" target="contentFrame" class="nav-link">
+                            <img src="../assets/fontawesome/svgs-full/solid/cog.svg" alt="" width="16" height="16" style="filter:invert(1)">
+                             User Settings
                         </a>
                     </div>
                     <div class="nav-item">
-                        <a href="../login/logout.php" class="nav-link">
-                            <i class="fa fa-sign-out-alt"></i> Logout
+                        <a href="../index.php" class="nav-link">
+                            <img src="../assets/fontawesome/svgs-full/solid/sign-out.svg" alt="" width="16" height="16" style="filter:invert(1)">
+                             Logout
                         </a>
                     </div>
                 </div>
@@ -214,6 +279,13 @@ $canAccessDashboard = in_array($userRole, ['Admin', 'Supervisor', 'Manager']);
                 </div>
 
                 <div class="top-nav-actions">
+    <!-- DateTime Display - Africa/Nairobi -->
+                    <div class="datetime-display" id="datetimeDisplay">
+                        <i class="bi bi-clock"></i>
+                        <span class="time" id="timeDisplay"><?php echo date('H:i:s'); ?></span>
+                        <span class="date" id="dateDisplay"><?php echo date('D, M d, Y'); ?></span>
+                    </div>
+
                     <button class="notification-btn">
                         <i class="bi bi-bell"></i>
                         <span class="notification-badge">3</span>
@@ -230,15 +302,18 @@ $canAccessDashboard = in_array($userRole, ['Admin', 'Supervisor', 'Manager']);
 
                     <!-- User Dropdown Menu -->
                     <div class="dropdown-menu-custom" id="userMenu">
-                        <a href="../users/profile.php" target="contentFrame" class="dropdown-item">
-                            <i class="bi bi-person"></i> Profile
+                        <a href="../login/profile.php" target="contentFrame" class="dropdown-item">
+                            <img src="../assets/fontawesome/svgs-full/solid/person-chalkboard.svg" alt="" width="16" height="16">
+                             Profile
                         </a>
-                        <a href="../users/settings.php" target="contentFrame" class="dropdown-item">
-                            <i class="bi bi-gear"></i> Settings
+                        <a href="../login/reset_password.php" target="contentFrame" class="dropdown-item">
+                            <img src="../assets/fontawesome/svgs-full/solid/shield.svg" alt="" width="16" height="16">
+                             Change password
                         </a>
                         <div class="dropdown-divider"></div>
-                        <a href="../login/logout.php" class="dropdown-item">
-                            <i class="bi bi-box-arrow-right"></i> Logout
+                        <a href="../index.php" class="dropdown-item">
+                            <img src="../assets/fontawesome/svgs-full/solid/sign-out.svg" alt="" width="16" height="16">
+                             Logout
                         </a>
                     </div>
                 </div>
@@ -299,7 +374,67 @@ $canAccessDashboard = in_array($userRole, ['Admin', 'Supervisor', 'Manager']);
                 // Cross-origin restrictions may prevent accessing title
             }
         });
+
+        // Africa/Nairobi DateTime Display
+        function updateDateTime() {
+            const now = new Date();
+
+            // Format time (HH:MM:SS)
+            const timeStr = now.toLocaleTimeString('en-US', {
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: false,
+                timeZone: 'Africa/Nairobi'
+            });
+
+            // Format date (Day, Month DD, YYYY)
+            const dateStr = now.toLocaleDateString('en-US', {
+                weekday: 'short',
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric',
+                timeZone: 'Africa/Nairobi'
+            });
+
+            const timeElement = document.getElementById('timeDisplay');
+            const dateElement = document.getElementById('dateDisplay');
+
+            if (timeElement) timeElement.textContent = timeStr;
+            if (dateElement) dateElement.textContent = dateStr;
+        }
+
+        // Initialize and update datetime every second
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initial update to ensure sync
+            updateDateTime();
+            // Update every second
+            setInterval(updateDateTime, 1000);
+        });
     </script>
+    <script>
+        // Add session verification for iframe content
+        window.addEventListener('message', function(event) {
+            if (event.data === "getSession") {
+                // Send session data to iframe
+                const iframe = document.getElementById('contentFrame');
+                if (iframe && iframe.contentWindow) {
+                    iframe.contentWindow.postMessage({
+                        type: 'sessionData',
+                        userId: '<?php echo $_SESSION['user_id'] ?? ''; ?>',
+                        fullName: '<?php echo $_SESSION['full_name'] ?? ''; ?>',
+                        role: '<?php echo $_SESSION['role'] ?? ''; ?>'
+                    }, '*');
+                }
+            }
+        });
+
+        // Also try to pass session on iframe load
+        document.getElementById('contentFrame').addEventListener('load', function() {
+            // You could inject session data into the iframe here if needed
+            console.log('Iframe loaded');
+        });
+        </script>
 </body>
 </html>
 <?php ob_end_flush(); ?>

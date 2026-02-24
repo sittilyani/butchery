@@ -1,7 +1,7 @@
 <?php
 ob_start();
 include '../includes/config.php';
-include '../includes/header.php';
+include '../includes/session_check.php';
 
 // Get current date and date ranges
 $currentDate = date('Y-m-d');

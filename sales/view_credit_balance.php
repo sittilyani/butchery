@@ -1,10 +1,10 @@
 <?php
 session_start();
 include '../includes/config.php';
-include '../includes/header.php';
+include '../includes/session_check.php';
 
 $result = $conn->query("SELECT * FROM credit_balances
-                        /*where payment_status = 'paid'*/
+
                         ORDER BY transDate DESC");
 ?>
 <?php
@@ -38,7 +38,9 @@ if (isset($_GET['message'])) {
                 <th>ID</th>
                 <th>Receipt ID</th>
                 <th>Customer Name</th>
+                <th>Customer Phone</th>
                 <th>Balance</th>
+                <th>Status</th> 
                 <th>Created At</th>
                 <th>Actions</th>
             </tr>
@@ -49,10 +51,12 @@ if (isset($_GET['message'])) {
                     <td><?= $row['id'] ?></td>
                     <td><?= $row['receipt_id'] ?></td>
                     <td><?= $row['customer_name'] ?></td>
+                    <td><?= $row['customer_phone'] ?></td>
                     <td><?= $row['balance_amount'] ?></td>
+                    <td><?= $row['status'] ?></td>
                     <td><?= $row['transDate'] ?></td>
                     <td>
-                        <button class="btn btn-sm btn-success mark-paid-btn" data-receipt-id="<?= $row['receipt_id'] ?>">Mark as Paid</button>
+                        <button class="btn btn-sm btn-success mark-paid-btn" data-receipt-id="<?= $row['receipt_id'] ?>">Process</button>
                         <button class="btn btn-sm btn-danger delete-btn" data-receipt-id="<?= $row['receipt_id'] ?>">Delete</button>
                     </td>
                 </tr>

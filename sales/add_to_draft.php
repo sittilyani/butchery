@@ -1,6 +1,8 @@
 <?php
 ob_start();
-include '../includes/header.php'; // Includes config.php and session_start()
+require_once '../includes/session_check.php';
+include '../includes/config.php';
+ // Includes config.php and session_start()
 header('Content-Type: application/json');
 
 // Validate session - check for both user_id and username

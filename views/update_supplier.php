@@ -1,6 +1,5 @@
 <?php
 include '../includes/config.php';
-include '../includes/header.php';
 
 $supplierId = isset($_GET['supplier_id']) ? intval($_GET['supplier_id']) : 0;
 
@@ -120,7 +119,7 @@ if ($supplierId > 0) {
             grid-template-columns: repeat(2, 1fr);
             gap: 25px;
             padding: 20px;
-            background-color: #FFFFE0;
+            background-color: #99ff99;
             border: 1px solid var(--border-color);
             border-radius: 8px;
             box-shadow: 0 2px 5px var(--shadow-light);

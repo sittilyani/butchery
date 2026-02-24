@@ -468,10 +468,6 @@ $stmt->close();
                 <i class="fas fa-spinner loading-spinner spinner"></i>
             </div>
 
-            <a href="../stocks/categories.php" class="add-category-btn">
-                <i class="fas fa-plus"></i> Add New Categories
-            </a>
-
             <a href="../stocks/products.php" class="add-product-btn">
                 <i class="fas fa-plus"></i> Add New Product
             </a>

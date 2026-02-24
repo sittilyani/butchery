@@ -1,6 +1,5 @@
 <?php
 include '../includes/config.php';
-include '../includes/header.php'; 
 
 $sql = "SELECT * FROM stocks WHERE stockBalance < reorderLevel";
 $result = $conn->query($sql);

@@ -32,10 +32,28 @@ if (!isset($_SESSION['full_name']) || empty($_SESSION['full_name'])) {
 
 // Store full_name in a variable for easy access
 $user_full_name = $_SESSION['full_name'];
-$user_role = $_SESSION['userrole'] ?? 'User'; 
+$user_role = $_SESSION['userrole'] ?? 'User';
 
 
 $receipt_id = isset($_GET['receipt_id']) ? $_GET['receipt_id'] : 'ORD' . date('Ymd') . sprintf("%04d", rand(1, 9999));
+
+// Fetch all products for display
+$products_query = "SELECT
+    p.id,
+    p.brandname,
+    p.productname,
+    p.unit_price,
+    COALESCE((
+        SELECT stockBalance
+        FROM stocks
+        WHERE brandname = p.brandname
+        ORDER BY stockID DESC
+        LIMIT 1
+    ), 0) as current_stock
+FROM products p
+ORDER BY p.brandname ASC";
+$products_result = $conn->query($products_query);
+$all_products = $products_result->fetch_all(MYSQLI_ASSOC);
 
 // Load draft order if receipt_id is provided
 $draft = null;
@@ -68,11 +86,11 @@ if (isset($_GET['receipt_id'])) {
         .product-item h6{font-size:.9rem;margin:5px 0;font-weight:700;color:#000}
         .product-item p{font-size:18px;margin:2px 0;color:#000}
         .product-item.disabled h6,.product-item.disabled p{color:#f00}
-        #products-container{max-height:70vh;padding-right:10px}
+        #products-container{max-height:70vh;padding-right:10px;overflow-y:auto}
         #products-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:15px;padding:5px 0}
         .order-summary{background-color:#f8f9fa;padding:20px;border-radius:8px;border:1px solid #dee2e6;min-height:40vh;overflow-y:auto}
         #order-items tr td{vertical-align:middle;padding:8px}
-        .quantity-input,.discount-input{width:70px;text-align:center}
+        .quantity-input,.discount-input,.weight-input{width:70px;text-align:center}
         .discount-input{-moz-appearance:textfield}
         .discount-input::-webkit-outer-spin-button,.discount-input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
         .search-container{display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap}
@@ -87,11 +105,15 @@ if (isset($_GET['receipt_id'])) {
         .discount-error{border-color:#dc3545!important;background-color:#f8d7da!important}
         .user-info{background-color:#f0f0f0;padding:10px 15px;border-radius:5px;margin-bottom:15px;text-align:right}
         .user-info strong{color:#000099}
+        .stock-badge{font-size:11px;padding:2px 6px;border-radius:10px;margin-left:5px}
+        .stock-badge.low{background:#fee2e2;color:#dc2626}
+        .stock-badge.normal{background:#dcfce7;color:#16a34a}
+
         @media(max-width:1200px){#products-list{grid-template-columns:repeat(auto-fill,minmax(180px,1fr))}.main-content{padding:18px}}
         @media(max-width:992px){#products-list{grid-template-columns:repeat(auto-fill,minmax(160px,1fr))}.product-item{height:110px;padding:8px}.main-content{padding:15px}}
         @media(max-width:768px){#products-list{grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}.product-item{height:100px;font-size:16px}.product-item h6{font-size:.85rem}.product-item p{font-size:16px}.order-summary{padding:15px;min-height:35vh}.search-container{gap:8px}.sales-mode-btn{margin:0 5px;padding:8px 15px;font-size:.9rem}.main-content{padding:12px}.user-info{text-align:center;font-size:14px}}
-        @media(max-width:576px){#products-list{grid-template-columns:1fr;gap:8px}.product-item{height:auto;min-height:90px;padding:10px}.product-item h6{font-size:.8rem}.product-item p{font-size:14px}.order-summary{padding:12px;min-height:30vh}.quantity-input,.discount-input{width:60px;font-size:.85rem}.search-container{flex-direction:column;gap:8px}.sales-mode-btn{display:block;width:100%;margin:5px 0;padding:10px}.total-section{padding:12px}.success-message{font-size:16px}.main-content{padding:10px}}
-        @media(max-width:400px){.product-item{font-size:14px;min-height:80px}.product-item h6{font-size:.75rem}.product-item p{font-size:13px}.quantity-input,.discount-input{width:50px;font-size:.8rem}.btn-remove{padding:2px 6px;font-size:.7rem}.sales-mode-btn{padding:8px;font-size:.85rem}}
+        @media(max-width:576px){#products-list{grid-template-columns:1fr;gap:8px}.product-item{height:auto;min-height:90px;padding:10px}.product-item h6{font-size:.8rem}.product-item p{font-size:14px}.order-summary{padding:12px;min-height:30vh}.quantity-input,.discount-input,.weight-input{width:60px;font-size:.85rem}.search-container{flex-direction:column;gap:8px}.sales-mode-btn{display:block;width:100%;margin:5px 0;padding:10px}.total-section{padding:12px}.success-message{font-size:16px}.main-content{padding:10px}}
+        @media(max-width:400px){.product-item{font-size:14px;min-height:80px}.product-item h6{font-size:.75rem}.product-item p{font-size:13px}.quantity-input,.discount-input,.weight-input{width:50px;font-size:.8rem}.btn-remove{padding:2px 6px;font-size:.7rem}.sales-mode-btn{padding:8px;font-size:.85rem}}
         @media(max-height:600px)and (orientation:landscape){#products-container{max-height:60vh}.order-summary{min-height:50vh}.product-item{height:90px;padding:8px}.main-content{padding:10px}}
     </style>
 </head>
@@ -120,11 +142,29 @@ if (isset($_GET['receipt_id'])) {
         <div class="col-md-6">
             <h4 class="mb-3">Products</h4>
             <div class="search-container">
-                <input type="text" id="product-search" class="form-control" placeholder="Search by brand name or generic name">
+                <input type="text" id="product-search" class="form-control" placeholder="Search by product name">
                 <button type="button" id="clear-search" class="btn btn-secondary">Clear</button>
             </div>
             <div id="products-container">
-                <div id="products-list"></div>
+                <div id="products-list">
+                    <?php foreach ($all_products as $product):
+                        $stock_class = $product['current_stock'] <= 0 ? 'disabled' : '';
+                        $stock_status = $product['current_stock'] <= 5 ? 'low' : 'normal';
+                    ?>
+                        <div class="product-item <?php echo $stock_class; ?>"
+                             data-product-id="<?php echo $product['id']; ?>"
+                             data-brand-name="<?php echo htmlspecialchars($product['brandname']); ?>"
+                             data-product-price="<?php echo $product['unit_price']; ?>"
+                             data-product-stock="<?php echo $product['current_stock']; ?>">
+                            <h6><?php echo htmlspecialchars($product['brandname']); ?></h6>
+                            <?php if (!empty($product['productname'])): ?>
+                                <small><?php echo htmlspecialchars($product['productname']); ?></small>
+                            <?php endif; ?>
+                            <p>KES <?php echo number_format($product['unit_price'], 2); ?>/kg</p>
+                            <small>Stock: <?php echo $product['current_stock']; ?> kg</small>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
             </div>
         </div>
         <div class="col-md-6">
@@ -140,7 +180,6 @@ if (isset($_GET['receipt_id'])) {
                         <select class="form-control" id="payment_method" name="payment_method">
                             <option value="Cash">Cash</option>
                             <option value="Mpesa">Mpesa</option>
-                            <!--<option value="Credit">Credit</option>-->
                         </select>
                     </div>
 
@@ -156,7 +195,7 @@ if (isset($_GET['receipt_id'])) {
                             <tr>
                                 <th>#</th>
                                 <th>Product</th>
-                                <th>Qty</th>
+                                <th>Weight (kg)</th>
                                 <th>Price</th>
                                 <th>Disc %</th>
                                 <th>Total</th>
@@ -221,7 +260,7 @@ if (isset($_GET['receipt_id'])) {
         let orderItems = draftItems.length > 0 ? draftItems.map(item => ({
             id: item.id,
             brandname: item.brandname,
-            quantity: parseInt(item.quantity),
+            quantity: parseFloat(item.quantity),
             price: parseFloat(item.price),
             discount: parseFloat(item.discount || 0),
             total_amount: parseFloat(item.total_amount),
@@ -229,11 +268,30 @@ if (isset($_GET['receipt_id'])) {
             grand_total: parseFloat(item.grand_total)
         })) : [];
 
+        // Search functionality
+        $('#product-search').on('input', function() {
+            const searchTerm = $(this).val().toLowerCase();
+            $('.product-item').each(function() {
+                const productName = $(this).find('h6').text().toLowerCase();
+                const genericName = $(this).find('small').first().text().toLowerCase();
+                if (productName.includes(searchTerm) || genericName.includes(searchTerm)) {
+                    $(this).show();
+                } else {
+                    $(this).hide();
+                }
+            });
+        });
+
+        $('#clear-search').click(function() {
+            $('#product-search').val('');
+            $('.product-item').show();
+        });
+
         // Sales mode handling
         $('.sales-mode-btn').click(function() {
             const mode = $(this).data('mode');
-            $('.sales-mode-btn').removeClass('mode-active');
-            $(this).addClass('mode-active');
+            $('.sales-mode-btn').removeClass('mode-active btn-outline-primary').addClass('btn-outline-secondary');
+            $(this).removeClass('btn-outline-secondary').addClass('mode-active btn-outline-primary');
             $('#sales_mode').val(mode);
 
             if (mode === 'direct') {
@@ -245,92 +303,75 @@ if (isset($_GET['receipt_id'])) {
             }
         });
 
-        function loadProducts(search = '') {
-            $.ajax({
-                url: 'fetch_products.php',
-                method: 'POST',
-                data: { search: search },
-                success: function(response) {
-                    $('#products-list').html(response);
-                    attachProductClickHandlers();
-                },
-                error: function(xhr, status, error) {
-                    console.error('AJAX Error:', { status, error, responseText: xhr.responseText });
-                    alert('Failed to load products.');
-                }
-            });
-        }
+        // Product click handler
+        $('.product-item:not(.disabled)').click(function() {
+            const productId = $(this).data('product-id');
+            const brandName = $(this).data('brand-name');
+            const productPrice = parseFloat($(this).data('product-price'));
+            const stockAvailable = parseFloat($(this).data('product-stock'));
 
-        function attachProductClickHandlers() {
-            $('#products-list .product-item:not(.disabled)').off('click').on('click', function() {
-                const productId = $(this).data('product-id');
-                const brandName = $(this).data('brand-name') || 'Unknown Product';
-                const productPrice = parseFloat($(this).data('product-price')) || 0;
+            const existingItem = orderItems.find(item => item.id === productId);
 
-                const existingItem = orderItems.find(item => item.id === productId);
-                if (existingItem) {
-                    existingItem.quantity += 1;
+            if (existingItem) {
+                const newQuantity = existingItem.quantity + 0.5; // Add 0.5kg by default
+                if (newQuantity <= stockAvailable) {
+                    existingItem.quantity = newQuantity;
                 } else {
+                    alert('Insufficient stock! Available: ' + stockAvailable + ' kg');
+                    return;
+                }
+            } else {
+                if (0.5 <= stockAvailable) {
                     orderItems.push({
                         id: productId,
                         brandname: brandName,
-                        quantity: 1,
+                        quantity: 0.5, // Start with 0.5kg for butchery
                         price: productPrice,
                         discount: 0
                     });
+                } else {
+                    alert('Insufficient stock! Available: ' + stockAvailable + ' kg');
+                    return;
                 }
-                updateOrderTable();
-            });
-        }
-
-        $('#product-search').on('input', function() {
-            const search = $(this).val().trim();
-            if (search.length >= 1) {
-                loadProducts(search);
-            } else {
-                $('#products-list').empty();
             }
+            updateOrderTable();
         });
 
-        $('#clear-search').click(function() {
-            $('#product-search').val('');
-            $('#products-list').empty();
-        });
-
-        let quantityTimeout;
-        $('#order-items').on('input', '.quantity-input', function() {
-            clearTimeout(quantityTimeout);
-            const $input = $(this);
-            const row = $input.closest('tr');
+        // Weight input handling
+        $('#order-items').on('input', '.weight-input', function() {
+            const row = $(this).closest('tr');
             const productId = row.data('id');
             const item = orderItems.find(item => item.id === productId);
 
             if (item) {
-                const newQuantity = parseInt($input.val()) || 1;
-                if (newQuantity < 1) {
-                    item.quantity = 1;
-                    $input.val(1);
-                } else {
-                    item.quantity = newQuantity;
+                const newWeight = parseFloat($(this).val()) || 0;
+                const stockAvailable = $('.product-item[data-product-id="' + productId + '"]').data('product-stock');
+
+                if (newWeight > stockAvailable) {
+                    alert('Insufficient stock! Available: ' + stockAvailable + ' kg');
+                    $(this).val(item.quantity);
+                    return;
                 }
-                const totalForItem = item.quantity * item.price;
-                const discountAmount = totalForItem * (item.discount / 100);
-                const grandTotalForItem = totalForItem - discountAmount;
-                const taxForItem = grandTotalForItem * 0.015;
 
-                item.total_amount = totalForItem;
-                item.tax_amount = taxForItem;
-                item.grand_total = grandTotalForItem;
-
-                row.find('td').eq(5).text(grandTotalForItem.toFixed(2));
-                updateTotals();
+                item.quantity = newWeight;
+                calculateItemTotals(item, row);
             }
-
-            quantityTimeout = setTimeout(() => {
-                updateOrderTable();
-            }, 500);
         });
 
+        // Quantity input handling (backward compatibility)
+        $('#order-items').on('input', '.quantity-input', function() {
+            const row = $(this).closest('tr');
+            const productId = row.data('id');
+            const item = orderItems.find(item => item.id === productId);
+
+            if (item) {
+                const newQuantity = parseInt($(this).val()) || 1;
+                item.quantity = newQuantity;
+                calculateItemTotals(item, row);
+            }
+        });
+
+        // Discount handling
         $('#order-items').on('input', '.discount-input', function() {
             const row = $(this).closest('tr');
             const productId = row.data('id');
@@ -340,7 +381,7 @@ if (isset($_GET['receipt_id'])) {
                 const discountPercent = parseFloat($(this).val()) || 0;
 
                 if (userRole !== 'Admin' && userRole !== 'Manager' && discountPercent > 10) {
-                    alert('Error: You are not allowed to give more than 10% discount on this item.');
+                    alert('You are not allowed to give more than 10% discount.');
                     $(this).val(item.discount);
                     $(this).addClass('discount-error');
                     return;
@@ -348,20 +389,23 @@ if (isset($_GET['receipt_id'])) {
 
                 $(this).removeClass('discount-error');
                 item.discount = discountPercent;
-
-                const totalForItem = item.quantity * item.price;
-                const discountAmount = totalForItem * (item.discount / 100);
-                const grandTotalForItem = totalForItem - discountAmount;
-                const taxForItem = grandTotalForItem * 0.015;
-
-                item.total_amount = totalForItem;
-                item.tax_amount = taxForItem;
-                item.grand_total = grandTotalForItem;
-
-                row.find('td').eq(5).text(grandTotalForItem.toFixed(2));
-                updateTotals();
+                calculateItemTotals(item, row);
             }
         });
+
+        function calculateItemTotals(item, row) {
+            const totalForItem = item.quantity * item.price;
+            const discountAmount = totalForItem * (item.discount / 100);
+            const grandTotalForItem = totalForItem - discountAmount;
+            const taxForItem = grandTotalForItem * 0.015;
+
+            item.total_amount = totalForItem;
+            item.tax_amount = taxForItem;
+            item.grand_total = grandTotalForItem;
+
+            row.find('td').eq(5).text(grandTotalForItem.toFixed(2));
+            updateTotals();
+        }
 
         $('#order-items').on('click', '.remove-item', function() {
             const productId = $(this).data('id');
@@ -385,13 +429,15 @@ if (isset($_GET['receipt_id'])) {
                     <tr data-id="${item.id}">
                         <td>${index + 1}</td>
                         <td>${item.brandname}</td>
-                        <td><input type="text" class="form-control quantity-input no-arrows" value="${item.quantity}" pattern="[0-9]*" inputmode="numeric"></td>
+                        <td>
+                            <input type="number" class="form-control weight-input" value="${item.quantity.toFixed(2)}" step="0.1" min="0.1" style="width:80px">
+                        </td>
                         <td>${parseFloat(item.price).toFixed(2)}</td>
                         <td>
-                            <input type="number" class="form-control discount-input" value="${item.discount.toFixed(2)}" step="0.1" min="0" max="100">
+                            <input type="number" class="form-control discount-input" value="${item.discount.toFixed(1)}" step="0.1" min="0" max="100" style="width:70px">
                         </td>
                         <td>${grandTotalForItem.toFixed(2)}</td>
-                        <td><button class="btn btn-danger btn-sm remove-item" data-id="${item.id}">Remove</button></td>
+                        <td><button class="btn btn-danger btn-sm remove-item" data-id="${item.id}"><i class="fas fa-trash"></i></button></td>
                     </tr>
                 `;
             });
@@ -427,9 +473,7 @@ if (isset($_GET['receipt_id'])) {
             $('#payment_status').val(tendered >= grandTotal ? 'Paid' : 'Pending');
         }
 
-        $('#tendered-amount').on('input', function() {
-            updateChange();
-        });
+        $('#tendered-amount').on('input', updateChange);
 
         $('#process-direct-sale').click(function() {
             if (orderItems.length === 0) {
@@ -528,7 +572,7 @@ if (isset($_GET['receipt_id'])) {
 
             const printWindow = window.open('', '_blank');
             let itemsHtml = `<table style="width:100%;border-collapse:collapse;font-size:12px;">
-            <tr><th>#</th><th>Product</th><th>Qty</th><th>Price</th><th>Discount %</th><th>Total</th></tr>`;
+            <tr><th>#</th><th>Product</th><th>Weight(kg)</th><th>Price</th><th>Disc %</th><th>Total</th></tr>`;
 
             orderItems.forEach((item, i) => {
                 const discountAmount = (item.quantity * item.price) * (item.discount / 100);
@@ -538,16 +582,16 @@ if (isset($_GET['receipt_id'])) {
                     <tr>
                         <td style="padding:2px;border:1px solid #000;">${i + 1}</td>
                         <td style="padding:2px;border:1px solid #000;">${item.brandname}</td>
-                        <td style="padding:2px;border:1px solid #000;">${item.quantity}</td>
+                        <td style="padding:2px;border:1px solid #000;">${item.quantity.toFixed(2)}</td>
                         <td style="padding:2px;border:1px solid #000;">${parseFloat(item.price).toFixed(2)}</td>
-                        <td style="padding:2px;border:1px solid #000;">${parseFloat(item.discount).toFixed(2)}%</td>
+                        <td style="padding:2px;border:1px solid #000;">${parseFloat(item.discount).toFixed(1)}%</td>
                         <td style="padding:2px;border:1px solid #000;">${itemTotal.toFixed(2)}</td>
                     </tr>`;
             });
             itemsHtml += '</table>';
 
             printWindow.document.write(`
-                <html><head><title>Receipt</title><style>
+                <html><head><title>Sales Receipt</title><style>
                     @media print {
                         @page { size: 80mm auto; margin: 2mm; padding: 2px; }
                     }
@@ -559,14 +603,14 @@ if (isset($_GET['receipt_id'])) {
                     table, th, td { border: 1px solid #000; border-collapse: collapse; text-align: left; }
                 </style></head><body>
                 <div class="logo">
-                     <img src="../assets/images/Logo-round-nobg-2.png" width="100" height="98" alt="Logo">
+                     <img src="../assets/images/Logo2-rb2.png" width="100" height="98" alt="Logo">
                 </div>
-                <h2>Order Receipt</h2>
+                <h2>Sales Receipt</h2>
                 <div class="receipt-info">
                     <p><strong>Receipt ID:</strong> ${receiptId}</p>
                     <p><strong>Date:</strong> ${new Date().toLocaleString()}</p>
-                    <p><strong>You were served by:</strong> ${userFullName}</p>
-                    <p><strong>Payment Method:</strong> ${$('#payment_method').val()}</p>
+                    <p><strong>Served by:</strong> ${userFullName}</p>
+                    <p><strong>Payment:</strong> ${$('#payment_method').val()}</p>
                 </div>
                 ${itemsHtml}
                 <div class="totals">
@@ -577,8 +621,6 @@ if (isset($_GET['receipt_id'])) {
                     <p>Tendered: KES ${$('#tendered-amount').val() || '0.00'}</p>
                     <p>Change: KES ${$('#change-amount').text()}</p>
                     <p>Payment Status: ${$('#payment_status').val()}</p>
-                    <p><span style="font-style: italic;">Human medicines & supplies</span></p>
-                    <p><div style="width: auto; background-color: #CC66FF; height: 30px;"></div></p>
                 </div>
                 </body></html>
             `);
@@ -588,7 +630,6 @@ if (isset($_GET['receipt_id'])) {
 
         // Initial setup
         updateOrderTable();
-        loadProducts();
     });
 </script>
 </body>

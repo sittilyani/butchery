@@ -2,7 +2,7 @@
 // mark_paid.php
 session_start();
 include '../includes/config.php';
-include '../includes/header.php';
+include '../includes/session_check.php';
 
 if (!isset($_GET['draft_id'])) {
     die("Draft ID is missing.");

@@ -2,7 +2,6 @@
 ob_start();
 session_start();
 include "../includes/config.php";
-include "../includes/header.php";
 
 // Set CSRF token if not already set
 if (empty($_SESSION['csrf_token'])) {
@@ -157,7 +156,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['csrf_token']) && $_PO
             grid-template-columns: repeat(3, 1fr); /* Three equal columns */
             gap: 25px; /* Spacing between columns and rows */
             padding: 20px;
-            background-color: #99ccff; /* Original light yellow background */
+            background-color: #99ff99; /* Original light yellow background */
             border: 1px solid var(--border-color);
             border-radius: 8px;
             box-shadow: 0 2px 5px var(--shadow-light);

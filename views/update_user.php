@@ -1,8 +1,6 @@
 <?php
 ob_start();
 include '../includes/config.php';
-include '../includes/header.php'; // Ensure this doesn't output conflicting HTML
-// Remove footer.php include if it outputs HTML prematurely
 
 // Initialize $user to an empty array to avoid warnings if no user is found
 $user = [];
@@ -128,7 +126,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['submit'])) {
             grid-template-columns: repeat(3, 1fr);
             gap: 25px;
             padding: 20px;
-            background-color: #66ccff;
+            background-color: #99ff99;
             border: 1px solid var(--border-color);
             border-radius: 8px;
             box-shadow: 0 2px 5px var(--shadow-light);
@@ -291,6 +289,5 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['submit'])) {
         </div>
     </div>
 
-    <?php include '../includes/footer.php'; // Include footer at the end ?>
 </body>
 </html>
