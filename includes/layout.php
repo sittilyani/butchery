@@ -177,7 +177,7 @@ $canAccessDashboard = in_array($userRole, ['Admin', 'Supervisor', 'Manager']);
                     <div class="logo-icon"><i class="bi bi-shop"></i></div>
                     <div class="logo-text">
                         <h3>Butchery Pro</h3>
-                        <p>Butchery Management</p>
+                        <p>Katakala Butchery & Restaurant</p>
                     </div>
                 </div>
             </div>

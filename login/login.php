@@ -553,7 +553,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             <div class="logo-section">
                 <img src="../assets/images/Logo2-rb2.png" alt="Butchery Logo">
                 <h1>ButcherSys Pro</h1>
-                <p>Butchery Management System</p>
+                <p>Katakala Butchery & Restaurant</p>
             </div>
 
             <?php if (!empty($error_message)): ?>
