@@ -1,5 +1,4 @@
-
-    <div class="footer">
+<div class="footer">
     <div class="footer-content">
         <!-- Contact Info Section -->
         <div class="footer-section">
@@ -45,16 +44,16 @@
         <!-- Website & Copyright Section -->
         <div class="footer-section">
             <h4 class="footer-title">Visit Us</h4>
-                <div class="visit-us">
-                    <a href="https://the-touch-haven-investments.store" class="website-link" target="_blank">
-                        <i class="fas fa-globe"></i>
-                        <span>the-touch-haven-investments.store</span>
-                    </a>
-                    <div class="copyright">
-                        <i class="far fa-copyright"></i>
-                        <span><?php echo date('Y'); ?> The Touch-Haven Investments. All rights reserved.</span>
-                    </div>
+            <div class="visit-us">
+                <a href="https://the-touch-haven-investments.store" class="website-link" target="_blank">
+                    <i class="fas fa-globe"></i>
+                    <span>the-touch-haven-investments.store</span>
+                </a>
+                <div class="copyright">
+                    <i class="far fa-copyright"></i>
+                    <span><?php echo date('Y'); ?> The Touch-Haven Investments.<br>All rights reserved.</span>
                 </div>
+            </div>
         </div>
     </div>
 </div>
